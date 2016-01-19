@@ -1,0 +1,34 @@
+"use strict";
+
+describe("ValidationError", function () {
+
+  let expect = require("chai").expect,
+      ValidationError = require("../index.js").ValidationError;
+
+  describe("constructor", function () {
+
+    it("should be a sub class of Error", function () {
+      expect((new ValidationError())).to.be.an.instanceOf(Error);
+    });
+
+    it("should capture stack trace", function () {
+      expect((new ValidationError()).stack).to.include("error_tests");
+    });
+
+    it("should set proper error name", function () {
+      expect((new ValidationError()).name).to.equal("ValidationError");
+    });
+
+    it("should set given error message", function () {
+      expect((new ValidationError("something's wrong")).message).to.equal("something's wrong");
+    });
+
+    it("should set http 400 status code", function () {
+      expect((new ValidationError("something's wrong")).statusCode).to.equal(400);
+    });
+
+    it("should set given http status code", function () {
+      expect((new ValidationError("not here", 404)).statusCode).to.equal(404);
+    });
+  });
+});
