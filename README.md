@@ -38,6 +38,15 @@ So to generate the swagger request handler:
     let handler = new RequestHandler();
     let swaggerHandler = swaggerRequestHandler(handler);
 
+Just like in Express with Connect, "multiple callback functions that behave just like middleware" can be given to swaggerRequestHandler, and they will be called one after the other.
+Middleware callbacks must have the following signature: function (req, res, next)
+The last argument of swaggerRequestHandler must always be a Handler instance implementing "getSpec()" and "handler(req, res)" methods. 
+An example:
+
+    let swaggerRequestHandler = require("btrz-service-req-res").swaggerRequestHandler;
+    let handler = new RequestHandler();
+    let swaggerHandler = swaggerRequestHandler(passportAuthenticate, otherMiddleware, handler);
+
 * Success/Error handlers
 
 Success handler expects data to be send with 200 OK status code.
