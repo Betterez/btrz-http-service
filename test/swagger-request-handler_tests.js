@@ -44,5 +44,30 @@ describe.only("SwaggerRequestHandler", function () {
     swaggerHandler.action(request);
   });
 
+  it("should respond with error if a middleware returns error", function (done) {
+    let handlerInstance = new HandlerClass();
+
+    let middleware = function (req, res, next) {
+      expect(req).to.deep.equal(request);
+      next();
+    };
+
+    let errorMiddleware = function (req, res, next) {
+      next(new Error("an errr"));
+    };
+
+    let response = {
+      status: function () { return this; },
+      json: function (body) {
+        expect(body).to.deep.equal({message: "an errr"});
+        done();
+      }
+    };
+
+    let request = {fn: function () {}};
+    let swaggerHandler = swaggerRequestHandler(middleware, errorMiddleware, middleware, handlerInstance);
+    swaggerHandler.action(request, response);
+  });
+
 
 });
