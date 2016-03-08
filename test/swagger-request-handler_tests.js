@@ -1,6 +1,6 @@
 "use strict";
 
-describe.only("SwaggerRequestHandler", function () {
+describe("SwaggerRequestHandler", function () {
 
   let expect = require("chai").expect,
       swaggerRequestHandler = require("../index.js").swaggerRequestHandler;

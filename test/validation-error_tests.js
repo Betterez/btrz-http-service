@@ -24,11 +24,11 @@ describe("ValidationError", function () {
     });
 
     it("should set http 400 status code", function () {
-      expect((new ValidationError("something's wrong")).statusCode).to.equal(400);
+      expect((new ValidationError("something's wrong")).status).to.equal(400);
     });
 
     it("should set given http status code", function () {
-      expect((new ValidationError("not here", 404)).statusCode).to.equal(404);
+      expect((new ValidationError("not here", 404)).status).to.equal(404);
     });
   });
 });
