@@ -29,6 +29,24 @@ describe("Response Handlers", function () {
       responseHandlers.success(response)();
     });
 
+    it("should set the passed status code on response", function (done) {
+      response.status = function (status) {
+        expect(status).to.equal(204);
+        done();
+        return this;
+      };
+      responseHandlers.success(response, 204)();
+    });
+
+    it("should set 200 in case the passed status code is not a success valid one", function (done) {
+      response.status = function (status) {
+        expect(status).to.equal(200);
+        done();
+        return this;
+      };
+      responseHandlers.success(response, 404)();
+    });
+
     it("should send data as json", function (done) {
       let data = {the: "answer"};
       response.json = function (sent) {
