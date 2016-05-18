@@ -89,7 +89,7 @@ describe("Response Handlers", function () {
         done();
         return this;
       };
-      let err = new ValidationError("hello");
+      let err = new ValidationError("HI", "hello");
       responseHandlers.error(response, logger)(err);
     });
 
@@ -99,13 +99,13 @@ describe("Response Handlers", function () {
         done();
         return this;
       };
-      let err = new ValidationError("hello", 404);
+      let err = new ValidationError("HI", "hello", 404);
       responseHandlers.error(response, logger)(err);
     });
 
     it("should send error message as json", function (done) {
       response.json = function (sent) {
-        expect(sent).to.deep.equal({message: "hello"});
+        expect(sent).to.deep.equal({code: "hello"});
         done();
         return this;
       };
@@ -119,17 +119,17 @@ describe("Response Handlers", function () {
         done();
         return this;
       };
-      let errs = [new ValidationError("hello"), new ValidationError("bye")];
+      let errs = [new ValidationError("HI", "hello"), new ValidationError("BYE", "bye")];
       responseHandlers.error(response, logger)(errs);
     });
 
     it("should send error messages as json for several validation errors", function (done) {
       response.json = function (sent) {
-        expect(sent).to.deep.equal({message: "hello, bye"});
+        expect(sent).to.deep.equal({code: "HI", message: "hello, bye"});
         done();
         return this;
       };
-      let errs = [new ValidationError("hello"), new ValidationError("bye")];
+      let errs = [new ValidationError("HI", "hello"), new ValidationError("BYE", "bye")];
       responseHandlers.error(response, logger)(errs);
     });
 

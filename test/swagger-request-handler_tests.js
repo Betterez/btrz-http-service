@@ -57,9 +57,12 @@ describe("SwaggerRequestHandler", function () {
     };
 
     let response = {
-      status: function () { return this; },
+      status: function (statusCode) {
+        expect(statusCode).to.equal(500);
+        return this;
+      },
       json: function (body) {
-        expect(body).to.deep.equal({message: "an errr"});
+        expect(body).to.deep.equal({code: "an errr"});
         done();
       }
     };

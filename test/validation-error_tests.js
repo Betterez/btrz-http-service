@@ -19,16 +19,20 @@ describe("ValidationError", function () {
       expect((new ValidationError()).name).to.equal("ValidationError");
     });
 
+    it("should set given error code", function () {
+      expect((new ValidationError("WRONG")).code).to.equal("WRONG");
+    });
+
     it("should set given error message", function () {
-      expect((new ValidationError("something's wrong")).message).to.equal("something's wrong");
+      expect((new ValidationError("WRONG", "something's wrong")).message).to.equal("something's wrong");
     });
 
     it("should set http 400 status code", function () {
-      expect((new ValidationError("something's wrong")).status).to.equal(400);
+      expect((new ValidationError("WRONG", "something's wrong")).status).to.equal(400);
     });
 
     it("should set given http status code", function () {
-      expect((new ValidationError("not here", 404)).status).to.equal(404);
+      expect((new ValidationError("NOTFOUND", "not here", 404)).status).to.equal(404);
     });
   });
 });
