@@ -134,4 +134,21 @@ describe("Response Handlers", function () {
     });
 
   });
+
+  describe(".createError()", function () {
+
+    it("should return an error called with no params", function () {
+      expect(responseHandlers.createError()).to.be.instanceof(Error);
+    });
+
+    it("should return an error called with a string", function () {
+      expect(responseHandlers.createError("foo")).to.be.instanceof(Error);
+    });
+
+    it("should return the same Error if called with an Error", function () {
+      let err = new Error("this is an error");
+      expect(responseHandlers.createError(err)).to.be.eql(err);
+    });
+
+  });
 });
