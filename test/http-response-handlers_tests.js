@@ -73,6 +73,27 @@ describe("Response Handlers", function () {
       expect(responseHandlers.error()).to.be.a.function;
     });
 
+    it("should not blow if logger is not given", () => {
+      function sut() {
+        responseHandlers.error(response)("h");
+      }
+      expect(sut).not.to.throw();
+    });
+
+    it("should not blow if error is not given", () => {
+      function sut() {
+        responseHandlers.error(response, logger)();
+      }
+      expect(sut).not.to.throw();
+    });
+
+    it("should not blow if error is an empty array", () => {
+      function sut() {
+        responseHandlers.error(response, logger)([]);
+      }
+      expect(sut).not.to.throw();
+    });
+
     it("should set status code 500 for generic error", function (done) {
       response.status = function (status) {
         expect(status).to.equal(500);
