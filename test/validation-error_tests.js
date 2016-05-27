@@ -34,5 +34,10 @@ describe("ValidationError", function () {
     it("should set given http status code", function () {
       expect((new ValidationError("NOTFOUND", "not here", 404)).status).to.equal(404);
     });
+
+    it("should have empty string defaults for code and message", function () {
+      expect((new ValidationError()).code).to.equal("");
+      expect((new ValidationError()).message).to.equal("");
+    });
   });
 });
