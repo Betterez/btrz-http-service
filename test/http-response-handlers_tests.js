@@ -171,5 +171,9 @@ describe("Response Handlers", function () {
       expect(responseHandlers.createError(err)).to.be.eql(err);
     });
 
+    it("should return the same Error if called with a ValidationError without message", function () {
+      let err = new ValidationError("code");
+      expect(responseHandlers.createError(err)).to.be.deep.equal(err);
+    });
   });
 });
