@@ -83,15 +83,21 @@ Returns an array of ValidationErrors with any schema mismatch.
 
 * ValidationError error type
 
+Subclass of Error, supporting an error code, message, and HTTP status override.
+Usage:
+
+    throw new ValidationError(errorCode, message, statusCode);
+    throw new ValidationError("CODE", "readable message", 418)
+
 The Error request handler will catch any error and send a 500 response with the message.
 
 If it recieves a ValidationError or an array of ValidationErrors, it will send a response with the message and status code 400.
 
 To change the HTTP status code, throw a validation error like:
 
-    throw new ValidationError(message, statusCode);
+    throw new ValidationError(errorCode, message, statusCode);
 
 for example:
 
-    throw new ValidationError("Cart not found", 404);
+    throw new ValidationError("NO_CART", "Cart not found", 404);
 
