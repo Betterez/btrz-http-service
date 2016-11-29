@@ -131,7 +131,7 @@ describe("Response Handlers", function () {
         return this;
       };
 
-      let err = {code: "E11000 duplicate key error index: betterez_core.stations.$name_1_accountId_1 dup key"};
+      let err = {err: "E11000 duplicate key error index: betterez_core.stations.$name_1_accountId_1 dup key"};
       responseHandlers.error(response, logger)(err);
     });
 
@@ -191,7 +191,7 @@ describe("Response Handlers", function () {
   describe("_isMongoDbConflict()", function () {
 
     it("should return true for a duplicated index error", function () {
-      let err = {code: "E11000 duplicate key error index: betterez_core.stations.$name_1_accountId_1 dup key"};
+      let err = {err: "E11000 duplicate key error index: betterez_core.stations.$name_1_accountId_1 dup key"};
       expect(responseHandlers._isMongoDbConflict(err)).to.be.true;
     });
 
