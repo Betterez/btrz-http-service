@@ -124,6 +124,17 @@ describe("Response Handlers", function () {
       responseHandlers.error(response, logger)(err);
     });
 
+    it("should set status code 409 (conflict) for a duplicated index error", function (done) {
+      response.status = function (status) {
+        expect(status).to.equal(409);
+        done();
+        return this;
+      };
+
+      let err = {code: "E11000 duplicate key error index: betterez_core.stations.$name_1_accountId_1 dup key"};
+      responseHandlers.error(response, logger)(err);
+    });
+
     it("should send error message as json", function (done) {
       response.json = function (sent) {
         expect(sent).to.deep.equal({code: "hello"});
@@ -175,5 +186,19 @@ describe("Response Handlers", function () {
       let err = new ValidationError("code");
       expect(responseHandlers.createError(err)).to.be.deep.equal(err);
     });
+  });
+
+  describe("_isMongoDbConflict()", function () {
+
+    it("should return true for a duplicated index error", function () {
+      let err = {code: "E11000 duplicate key error index: betterez_core.stations.$name_1_accountId_1 dup key"};
+      expect(responseHandlers._isMongoDbConflict(err)).to.be.true;
+    });
+
+    it("should return false for another non-mongo generic error", function () {
+      let err = new Error("any error!");
+      expect(responseHandlers._isMongoDbConflict(err)).to.be.false;
+    });
+
   });
 });
