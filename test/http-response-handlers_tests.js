@@ -17,7 +17,7 @@ describe("Response Handlers", function () {
     })
 
     it("should return handler function", function () {
-      expect(responseHandlers.success()).to.be.a.function;
+      expect(typeof responseHandlers.success()).to.eql("function")
     });
 
     it("should set status code 200 on response", function (done) {
@@ -70,7 +70,7 @@ describe("Response Handlers", function () {
     })
 
     it("should return handler function", function () {
-      expect(responseHandlers.error()).to.be.a.function;
+      expect(typeof responseHandlers.error()).to.eql("function");
     });
 
     it("should not blow if logger is not given", () => {
@@ -137,7 +137,7 @@ describe("Response Handlers", function () {
 
     it("should send error message as json", function (done) {
       response.json = function (sent) {
-        expect(sent).to.deep.equal({code: "hello"});
+        expect(sent).to.deep.equal({code: "hello", message: "hello"});
         done();
         return this;
       };
