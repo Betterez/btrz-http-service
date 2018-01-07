@@ -1,6 +1,6 @@
 {
   "name": "btrz-service-req-res",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "HTTP request/response related utilities for Betterez APIs",
   "main": "index.js",
   "scripts": {
