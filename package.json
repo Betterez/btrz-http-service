@@ -25,7 +25,8 @@
   },
   "homepage": "https://github.com/Betterez/btrz-service-req-res#readme",
   "dependencies": {
-    "express-mung": "^0.4.2"
+    "express-mung": "^0.4.2",
+    "lodash": "^4.17.4"
   },
   "devDependencies": {
     "chai": "latest",
