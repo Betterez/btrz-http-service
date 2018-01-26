@@ -11,8 +11,8 @@ describe("Response Handlers", function () {
     let response;
     beforeEach(function () {
       response = {
-        status: function () { return this; },
-        json: function () { return this; }
+        status() { return this; },
+        json() { return this; }
       };
     })
 
@@ -63,10 +63,13 @@ describe("Response Handlers", function () {
     let response, logger;
     beforeEach(function () {
       response = {
-        status: function () { return this; },
-        json: function () { return this; }
+        status() { return this; },
+        json() { return this; }
       };
-      logger = {error: function () {}};
+      logger = {
+        error() { },
+        fatal() { }
+      };
     })
 
     it("should return handler function", function () {
@@ -145,6 +148,21 @@ describe("Response Handlers", function () {
       responseHandlers.error(response, logger)(err);
     });
 
+    it("should log fatal if err is 500", function (done) {
+      const _logger = {
+        fatal() {
+          expect(1).to.be.eql(1);
+        }
+      }
+      response.json = function (sent) {
+        expect(sent).to.deep.equal({ code: "hello", message: "hello" });
+        done();
+        return this;
+      };
+      let err = new Error("hello");
+      responseHandlers.error(response, _logger)(err);
+    });
+
     it("should set status code 400 for several validation errors", function (done) {
       response.status = function (status) {
         expect(status).to.equal(400);
@@ -153,6 +171,21 @@ describe("Response Handlers", function () {
       };
       let errs = [new ValidationError("HI", "hello"), new ValidationError("BYE", "bye")];
       responseHandlers.error(response, logger)(errs);
+    });
+
+    it("should log error if err is 400", function (done) {
+      const _logger = {
+        error() {
+          expect(1).to.be.eql(1);
+        }
+      }
+      response.status = function (status) {
+        expect(status).to.equal(400);
+        done();
+        return this;
+      };
+      let errs = [new ValidationError("HI", "hello"), new ValidationError("BYE", "bye")];
+      responseHandlers.error(response, _logger)(errs);
     });
 
     it("should send error messages as json for several validation errors", function (done) {

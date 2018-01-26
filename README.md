@@ -91,7 +91,7 @@ Usage:
 
 The Error request handler will catch any error and send a 500 response with the message.
 
-If it recieves a ValidationError or an array of ValidationErrors, it will send a response with the message and status code 400.
+If it receives a ValidationError or an array of ValidationErrors, it will send a response with the message and status code 400.
 
 To change the HTTP status code, throw a validation error like:
 
