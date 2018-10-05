@@ -5,7 +5,7 @@ HTTP request/response related utilities for Betterez APIs
 
 Utilities:
 
-* Swagger request handler formatter
+### Swagger request handler formatter
 
 Generates a definition for swagger including a request handler and it's schema.
 
@@ -47,7 +47,7 @@ An example:
     let handler = new RequestHandler();
     let swaggerHandler = swaggerRequestHandler(passportAuthenticate, otherMiddleware, handler);
 
-* Success/Error handlers
+### Success/Error handlers
 
 Success handler expects data to be send with 200 OK status code.
 
@@ -73,7 +73,7 @@ Notice that ResponseHandlers.success and ResponseHandlers.error both expect the 
 
 Notice that ResponseHandlers.success and ResponseHandlers.error must be added at the end of the promises chain, and only once.
 
-* Swagger Schema Validation
+### Swagger Schema Validation
 
 Validates a body against a handler schema (a schema like the one in getSpec() above).
 Returns an array of ValidationErrors with any schema mismatch.
@@ -81,7 +81,7 @@ Returns an array of ValidationErrors with any schema mismatch.
     let validateSwaggerSchema = require("btrz-service-req-res").validateSwaggerSchema;
     validateSwaggerSchema(validatorFunction, handlerSpec, schemaModelsDefinitionJSON, requestObject)
 
-* ValidationError error type
+### ValidationError error type
 
 Subclass of Error, supporting an error code, message, and HTTP status override.
 Usage:
@@ -101,3 +101,29 @@ for example:
 
     throw new ValidationError("NO_CART", "Cart not found", 404);
 
+### Paginated Response Builder
+
+This utility builds a standard response for a paginated resource.
+
+Inputs:
+
+- result: the list of resources in the current page, in the form {resourceName: list}
+- query: the query directly from the request (req.query)
+- totalRecords: the count of all the resources
+- pageSize: the page size from the config (config.pageSize)
+- baseUrl: the FULL url of the resource (domain/api/resource)
+
+Output:
+
+    {
+      resourceName: list, // the resourceName as given in the "result" input
+      count, // the "totalRecords" input
+      next, // the full URL to the next page, empty string if no next page
+      previous // the full URL to the previous page, empty string if no previous page
+    }
+
+Usage example in Handler:
+
+    const result = {customers: countedCustomers.list},
+      url = `${this.config.fullDomain()}/accounts${this.getSpec().path}`;
+    return ResponseBuilder.buildResponse(result, req.query, countedCustomers.count, this.config.pageSize, url);
