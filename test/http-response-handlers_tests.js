@@ -233,5 +233,10 @@ describe("Response Handlers", function () {
       expect(responseHandlers._isMongoDbConflict(err)).to.be.false;
     });
 
+    it("should return true for a duplicated collection error", function () {
+      let err = {message: "E11000 duplicate key error collection: database_name.collection.$indexName dup key"};
+      expect(responseHandlers._isMongoDbConflict(err)).to.be.true;
+    });
+
   });
 });
