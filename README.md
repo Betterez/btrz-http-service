@@ -1,7 +1,7 @@
-btrz-service-req-res
+btrz-http-service
 ====================
 
-HTTP request/response related utilities for Betterez APIs
+HTTP related utilities for Betterez APIs
 
 Utilities:
 
@@ -34,7 +34,7 @@ An example Handler Class must implement "getSpec()" and "handler(req, res)" meth
 
 So to generate the swagger request handler:
 
-    let swaggerRequestHandler = require("btrz-service-req-res").swaggerRequestHandler;
+    let swaggerRequestHandler = require("btrz-http-service").swaggerRequestHandler;
     let handler = new RequestHandler();
     let swaggerHandler = swaggerRequestHandler(handler);
 
@@ -43,7 +43,7 @@ Middleware callbacks must have the following signature: function (req, res, next
 The last argument of swaggerRequestHandler must always be a Handler instance implementing "getSpec()" and "handler(req, res)" methods. 
 An example:
 
-    let swaggerRequestHandler = require("btrz-service-req-res").swaggerRequestHandler;
+    let swaggerRequestHandler = require("btrz-http-service").swaggerRequestHandler;
     let handler = new RequestHandler();
     let swaggerHandler = swaggerRequestHandler(passportAuthenticate, otherMiddleware, handler);
 
@@ -78,7 +78,7 @@ Notice that ResponseHandlers.success and ResponseHandlers.error must be added at
 Validates a body against a handler schema (a schema like the one in getSpec() above).
 Returns an array of ValidationErrors with any schema mismatch.
   
-    let validateSwaggerSchema = require("btrz-service-req-res").validateSwaggerSchema;
+    let validateSwaggerSchema = require("btrz-http-service").validateSwaggerSchema;
     validateSwaggerSchema(validatorFunction, handlerSpec, schemaModelsDefinitionJSON, requestObject)
 
 ### ValidationError error type
@@ -127,3 +127,30 @@ Usage example in Handler:
     const result = {customers: countedCustomers.list},
       url = `${this.config.fullDomain()}/accounts${this.getSpec().path}`;
     return ResponseBuilder.buildResponse(result, req.query, countedCustomers.count, this.config.pageSize, url);
+
+### Register
+
+For the new API model, call this method to register all handlers and models
+
+```
+const register = require("btrz-http-service").register;
+const basePath = `${__dirname}/path/to/modules`;
+
+register(basePath, {models: require("./models/"),
+    authenticator,
+    swagger,
+    logger,
+    simpleDao,
+    config});
+```
+
+Arguments:
+
+- basePath: relative path to start searching for handlers
+- options:
+  - models // default to {models: {}} if not passed
+  - authenticator // an instance of Authenticator from "btrz-auth-api-key"
+  - swagger // an instance of swagger from "btrz-swagger-express"
+  - logger // an instance of Logger from "btrz-logger"
+  - simpleDao // an instance of BtrzSimpleDao from "btrz-simple-dao"
+  - config // a configuration object for the API
