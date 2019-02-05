@@ -1,6 +1,6 @@
 "use strict";
 
-describe.only("register", function () {
+describe("register", function () {
   const registerModules = require("../index.js").registerModules;
   const expect = require("chai").expect;
 
