@@ -29,6 +29,7 @@
   "devDependencies": {
     "chai": "latest",
     "istanbul": "^0.4.1",
-    "mocha": "latest"
+    "mocha": "latest",
+    "eslint": "latest"
   }
 }
