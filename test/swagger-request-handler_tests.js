@@ -1,76 +1,77 @@
 "use strict";
 
-describe("SwaggerRequestHandler", function () {
-
-  let expect = require("chai").expect,
-      swaggerRequestHandler = require("../index.js").swaggerRequestHandler;
+describe("SwaggerRequestHandler", () => {
+  const expect = require("chai").expect;
+  const swaggerRequestHandler = require("../index.js").swaggerRequestHandler;
 
   class HandlerClass {
-    getSpec () { return "specc"; }
-    handler (req) { req.fn(); }
+    getSpec() {
+      return "specc";
+    }
+    handler(req) {
+      req.fn();
+    }
   }
 
-  it("should create an object with spec from given handler", function () {
-    let handlerInstance = new HandlerClass();
-    let swaggerHandler = swaggerRequestHandler(handlerInstance);
+  it("should create an object with spec from given handler", () => {
+    const handlerInstance = new HandlerClass();
+    const swaggerHandler = swaggerRequestHandler(handlerInstance);
 
     expect(swaggerHandler.spec).to.equal("specc");
   });
 
-  it("should create an object with spec from the last argument (must be the handler)", function () {
-    let handlerInstance = new HandlerClass();
-    let swaggerHandler = swaggerRequestHandler(function () {}, function () {}, handlerInstance);
+  it("should create an object with spec from the last argument (must be the handler)", () => {
+    const handlerInstance = new HandlerClass();
+    const swaggerHandler = swaggerRequestHandler(() => {}, () => {}, handlerInstance);
 
     expect(swaggerHandler.spec).to.equal("specc");
   });
 
-  it("should create object with action that calls the given handler", function (done) {
-    let handlerInstance = new HandlerClass();
-    let swaggerHandler = swaggerRequestHandler(handlerInstance);
+  it("should create object with action that calls the given handler", (done) => {
+    const handlerInstance = new HandlerClass();
+    const swaggerHandler = swaggerRequestHandler(handlerInstance);
 
     swaggerHandler.action({fn: done});
   });
 
-  it("should create object with action that executes middlewares before calling the given handler", function (done) {
-    let handlerInstance = new HandlerClass();
+  it("should create object with action that executes middlewares before calling the given handler", (done) => {
+    const handlerInstance = new HandlerClass();
+    const request = {fn: done};
 
-    let middleware = function (req, res, next) {
+    function middleware(req, res, next) {
       expect(req).to.deep.equal(request);
       next();
-    };
+    }
 
-    let request = {fn: done};
-    let swaggerHandler = swaggerRequestHandler(middleware, middleware, middleware, handlerInstance);
+    const swaggerHandler = swaggerRequestHandler(middleware, middleware, middleware, handlerInstance);
     swaggerHandler.action(request);
   });
 
-  it("should respond with error if a middleware returns error", function (done) {
-    let handlerInstance = new HandlerClass();
+  it("should respond with error if a middleware returns error", (done) => {
+    const handlerInstance = new HandlerClass();
+    const request = {fn: () => {}};
 
-    let middleware = function (req, res, next) {
+    function middleware(req, res, next) {
       expect(req).to.deep.equal(request);
       next();
-    };
+    }
 
-    let errorMiddleware = function (req, res, next) {
+    function errorMiddleware(req, res, next) {
       next(new Error("an errr"));
-    };
+    }
 
-    let response = {
-      status: function (statusCode) {
+    const response = {
+      status(statusCode) {
         expect(statusCode).to.equal(500);
         return this;
       },
-      json: function (body) {
+      json(body) {
         expect(body).to.deep.equal({code: "an errr", message: "an errr"});
         done();
       }
     };
 
-    let request = {fn: function () {}};
-    let swaggerHandler = swaggerRequestHandler(middleware, errorMiddleware, middleware, handlerInstance);
+    const swaggerHandler = swaggerRequestHandler(middleware, errorMiddleware, middleware, handlerInstance);
     swaggerHandler.action(request, response);
   });
-
-
 });

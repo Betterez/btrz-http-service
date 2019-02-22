@@ -30,6 +30,7 @@
     "chai": "latest",
     "istanbul": "^0.4.1",
     "mocha": "latest",
-    "eslint": "latest"
+    "eslint": "^3.18.0",
+    "eslint-plugin-mocha": "^4.9.0"
   }
 }

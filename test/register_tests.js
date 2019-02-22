@@ -1,6 +1,6 @@
 "use strict";
 
-describe("register", function () {
+describe("register", () => {
   const registerModules = require("../index.js").registerModules;
   const expect = require("chai").expect;
 
@@ -10,7 +10,10 @@ describe("register", function () {
       models: {models: "hkasdjhasd"},
       swagger: {
         addModels(models) {
-          expect(models.models).to.be.eql({"module1": {},"module2": {}});
+          expect(models.models).to.be.eql({
+            "module1": {},
+            "module2": {}
+          });
         }
       }
     });
