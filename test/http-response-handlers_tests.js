@@ -138,6 +138,42 @@ describe("Response Handlers", () => {
       responseHandlers.error(response, logger)(err);
     });
 
+    it("should set status code 404 for an error with type NOT_FOUND", (done) => {
+      response.status = function _status(status) {
+        expect(status).to.equal(404);
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      err.code = "HI";
+      err.type = "NOT_FOUND";
+      responseHandlers.error(response, logger)(err);
+    });
+
+    it("should set status code 400 for an error with type INVALID", (done) => {
+      response.status = function _status(status) {
+        expect(status).to.equal(400);
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      err.code = "HI";
+      err.type = "INVALID";
+      responseHandlers.error(response, logger)(err);
+    });
+
+    it("should set status code 400 for an error with type not recognised", (done) => {
+      response.status = function _status(status) {
+        expect(status).to.equal(400);
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      err.code = "HI";
+      err.type = "NEW_ERR_TYPE";
+      responseHandlers.error(response, logger)(err);
+    });
+
     it("should set status code 409 (conflict) for a duplicated index error", (done) => {
       response.status = function _status(status) {
         expect(status).to.equal(409);
@@ -149,6 +185,16 @@ describe("Response Handlers", () => {
       responseHandlers.error(response, logger)(err);
     });
 
+    it("should not fail if no logger", (done) => {
+      response.json = function _json(sent) {
+        expect(sent).to.deep.equal({code: "hello", message: "hello"});
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      responseHandlers.error(response, null)(err);
+    });
+
     it("should send error message as json", (done) => {
       response.json = function _json(sent) {
         expect(sent).to.deep.equal({code: "hello", message: "hello"});
@@ -156,6 +202,18 @@ describe("Response Handlers", () => {
         return this;
       };
       const err = new Error("hello");
+      responseHandlers.error(response, logger)(err);
+    });
+
+    it("should send error message as json for error with type and code", (done) => {
+      response.json = function _json(sent) {
+        expect(sent).to.deep.equal({code: "HI", message: "hello"});
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      err.code = "HI";
+      err.type = "TYPE";
       responseHandlers.error(response, logger)(err);
     });
 
