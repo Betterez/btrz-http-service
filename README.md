@@ -173,6 +173,11 @@ Arguments:
 
 A series of RegExp patterns to use on common Swagger validations.
 
+Each key comes in two variations a RegExp and a String, each identified with the suffix.
+
+_REGEXP
+_STRING
+
 ```
   DATE_MMDDYYYY_PATTERN: to validate dates in the mmddyyyy format
   DATE_YYYY_MM_DD_PATTERN: to validate dates in the yyyy-mm-dd format
