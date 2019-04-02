@@ -73,6 +73,19 @@ Notice that ResponseHandlers.success and ResponseHandlers.error both expect the 
 
 Notice that ResponseHandlers.success and ResponseHandlers.error must be added at the end of the promises chain, and only once.
 
+
+
+### Swagger schemas
+
+Some common schemas to avoid duplication.
+We should grow these schemas when we find common patterns.
+
+```
+  bzDate (The schema for BzDate)
+  errorResponse (The schema for the error responses)
+  defaultPagingProps (The properties that are common to any list that supports paging)
+```
+
 ### Swagger Schema Validation
 
 Validates a body against a handler schema (a schema like the one in getSpec() above).
@@ -154,3 +167,17 @@ Arguments:
   - logger // an instance of Logger from "btrz-logger"
   - simpleDao // an instance of BtrzSimpleDao from "btrz-simple-dao"
   - config // a configuration object for the API
+
+
+### validationPatterns
+
+A series of RegExp patterns to use on common Swagger validations.
+
+```
+  DATE_MMDDYYYY_PATTERN: to validate dates in the mmddyyyy format
+  DATE_YYYY_MM_DD_PATTERN: to validate dates in the yyyy-mm-dd format
+  OBJECT_ID_PATTERN: to validate a Mongo ObjectID
+  TIME_HHMM_PATTERN: to validate time in the HH:MM format
+  UUID4_PATTERN: to validate uuid v4 ids
+
+```
