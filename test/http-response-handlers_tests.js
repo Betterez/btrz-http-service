@@ -207,7 +207,7 @@ describe("Response Handlers", () => {
 
     it("should send error message as json for error with type and code", (done) => {
       response.json = function _json(sent) {
-        expect(sent).to.deep.equal({code: "HI", message: "hello", context: {}});
+        expect(sent).to.deep.equal({code: "HI", message: "hello"});
         done();
         return this;
       };
@@ -262,7 +262,7 @@ describe("Response Handlers", () => {
 
     it("should send error messages as json for several validation errors", (done) => {
       response.json = function _json(sent) {
-        expect(sent).to.deep.equal({code: "HI", message: "hello, bye", context: {}});
+        expect(sent).to.deep.equal({code: "HI", message: "hello, bye"});
         done();
         return this;
       };
