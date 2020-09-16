@@ -27,6 +27,7 @@
     "express-mung": "^0.4.2"
   },
   "devDependencies": {
+    "chance": "^1.1.7",
     "chai": "latest",
     "mocha": "latest",
     "eslint": "^4.19.1",
