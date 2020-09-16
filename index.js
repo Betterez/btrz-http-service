@@ -6,3 +6,5 @@ exports.LogErrorsMiddleware = require("./lib/log-errors-middleware");
 exports.PaginatedResponseBuilder = require("./lib/paginated-response-builder");
 exports.registerModules = require("./lib/register").registerModules;
 exports.validationPatterns = require("./lib/validation-patterns");
+exports.swaggerSchemas = require("./lib/swagger-schemas");
+exports.lexiconCommands = require("./lib/lexicons-commands");
