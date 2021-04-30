@@ -162,7 +162,7 @@ describe("Response Handlers", () => {
       responseHandlers.error(response, logger)(err);
     });
 
-    it("should set status code 400 for an error with type not recognised", (done) => {
+    it("should set status code 400 for an error with type not recognized", (done) => {
       response.status = function _status(status) {
         expect(status).to.equal(400);
         done();
@@ -232,6 +232,53 @@ describe("Response Handlers", () => {
         return this;
       };
       const err = new Error("hello");
+      responseHandlers.error(response, _logger)(err);
+    });
+
+    it("should log the err status if provided", (done) => {
+      const _logger = {
+        fatal() {
+          expect(1).to.be.eql(1);
+        }
+      };
+      response.status = function _status(status) {
+        expect(status).to.equal(425);
+        return this;
+      };
+      response.json = function _json(sent) {
+        expect(sent).to.deep.equal({
+          code: "hello",
+          message: "hello"
+        });
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      err.status = 425;
+      responseHandlers.error(response, _logger)(err);
+    });
+
+
+    it("should log the err status 500 if err.status isNaN", (done) => {
+      const _logger = {
+        fatal() {
+          expect(1).to.be.eql(1);
+        }
+      };
+      response.status = function _status(status) {
+        expect(status).to.equal(500);
+        return this;
+      };
+      response.json = function _json(sent) {
+        expect(sent).to.deep.equal({
+          code: "hello",
+          message: "hello"
+        });
+        done();
+        return this;
+      };
+      const err = new Error("hello");
+      err.status = "something";
       responseHandlers.error(response, _logger)(err);
     });
 
