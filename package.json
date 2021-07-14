@@ -1,6 +1,6 @@
 {
   "name": "btrz-http-service",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "description": "HTTP related utilities for Betterez APIs",
   "main": "index.js",
   "scripts": {
