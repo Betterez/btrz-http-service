@@ -115,6 +115,23 @@ describe("Middleware", () => {
       expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
     });
 
+    it("if lookup does not exist, and checkForKeyOnly is true it should call next", async () => {
+      expiringKey = new ExpiringKey(redis);
+      const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", checkForKeyOnly: true});
+      const req = {body: {paramToFind: "foundParam"}};
+      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        callback();
+      });
+      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+        callback();
+      });
+
+      await middleware(req, res, () => { return "next" });
+      expect(getCall.calledOnce).to.eql(true);
+      expect(setCall.calledOnce).to.eql(false);
+      expect(req.uniqueRequestKey).to.be.undefined;
+    });
+
     it.skip("if the same key is sent before the first has expired, it should reject the second call", async () => {
       sandbox.spy(redis, "get");
       sandbox.spy(redis, "set");
