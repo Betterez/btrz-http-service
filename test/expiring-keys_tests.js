@@ -151,7 +151,7 @@ describe("Middleware", () => {
       expect(req.uniqueRequestKey).to.be.undefined;
     });
 
-    it("if lookup does not exist, and the lookup keyName has been set, and checkForKeyOnly is true it should call next", async () => {
+    it("if lookup exists, and the lookup keyName has been set, and checkForKeyOnly is true it should call next", async () => {
       expiringKey = new ExpiringKey(redis);
       const keyName = "body.paramToFind";
       const alternateKeyName = "altBody.altNewKey";
