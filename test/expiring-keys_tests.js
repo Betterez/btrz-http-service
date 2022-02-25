@@ -132,6 +132,46 @@ describe("Middleware", () => {
       expect(req.uniqueRequestKey).to.be.undefined;
     });
 
+    it("if lookup does not exist, and the lookup format is invalid, and checkForKeyOnly is true it should call next", async () => {
+      expiringKey = new ExpiringKey(redis);
+      const alternateKeyName = "altBody.altNewKey";
+      const middleware = expiringKey.middleWare({lookup: {keysName: "mistake", alternateKeyName}, path: "path", method: "method", checkForKeyOnly: true});
+      const req = {body: {paramToFind: "foundParam"}};
+      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        callback();
+      });
+      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+        callback();
+      });
+
+      await middleware(req, res, () => { return "next" });
+
+      expect(getCall.calledOnce).to.eql(false);
+      expect(setCall.calledOnce).to.eql(false);
+      expect(req.uniqueRequestKey).to.be.undefined;
+    });
+
+    it("if lookup does not exist, and the lookup keyName has been set, and checkForKeyOnly is true it should call next", async () => {
+      expiringKey = new ExpiringKey(redis);
+      const keyName = "body.paramToFind";
+      const alternateKeyName = "altBody.altNewKey";
+      const middleware = expiringKey.middleWare({lookup: {keyName, alternateKeyName}, path: "path", method: "method", checkForKeyOnly: true});
+      const req = {body: {paramToFind: "foundParam"}};
+      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        callback();
+      });
+      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+        callback();
+      });
+
+      await middleware(req, res, () => { return "next" });
+
+      expect(getCall.getCall(0).args[0]).to.eql(`key:path:method:${alternateKeyName}:foundParam`);
+      expect(getCall.calledOnce).to.eql(true);
+      expect(setCall.calledOnce).to.eql(false);
+      expect(req.uniqueRequestKey).to.be.undefined;
+    });
+
     it.skip("if the same key is sent before the first has expired, it should reject the second call", async () => {
       sandbox.spy(redis, "get");
       sandbox.spy(redis, "set");
