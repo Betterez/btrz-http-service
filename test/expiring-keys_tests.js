@@ -93,6 +93,9 @@ describe("Middleware", () => {
       });      
       sandbox.spy(res, "send");
       const result = await middleware(req, res, () => { return "next" });
+
+      expect(res.send.returnValues[0].code).to.eql(409);
+      expect(res.send.returnValues[0].message).to.eql("A blocking key was found");
       expect(getCall.calledOnce).to.eql(true);
       expect(setCall.calledOnce).to.eql(false);
       expect(res.send.calledOnce).to.eql(true);
@@ -193,6 +196,26 @@ describe("Middleware", () => {
         });
         expect(res.send.calledOnce).to.eql(true);
       });
-    });   
+    });
+    
+    it("if lookup exists, and db returns a value it should call onKeyFound, with a custom message", async () => {
+      expiringKey = new ExpiringKey(redis);
+      const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", message: "test message"});
+      const req = {body: {paramToFind: "foundParam"}};
+      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        callback(null, "processed");
+      });
+      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+        callback();
+      });      
+      sandbox.spy(res, "send");
+      const result = await middleware(req, res, () => { return "next" });
+
+      expect(res.send.returnValues[0].code).to.eql(409);
+      expect(res.send.returnValues[0].message).to.eql("test message");
+      expect(getCall.calledOnce).to.eql(true);
+      expect(setCall.calledOnce).to.eql(false);
+      expect(res.send.calledOnce).to.eql(true);
+    });       
   });
 });
