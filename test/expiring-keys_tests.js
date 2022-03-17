@@ -88,7 +88,7 @@ describe("Middleware", () => {
       const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
         callback(null, "processed");
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+      const setCall = sandbox.stub(redis, "set").callsFake((key, value, lock, index, expire, callback) => {
         callback();
       });      
       sandbox.spy(res, "send");
@@ -101,21 +101,22 @@ describe("Middleware", () => {
       expect(res.send.calledOnce).to.eql(true);
     });
 
-    it("if lookup does not exist it should set the value of the uniqueRequestKey", async () => {
+    it("if lookup does not exist it should set the value of the uniqueRequestKey", () => {
       expiringKey = new ExpiringKey(redis);
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method"});
       const req = {body: {paramToFind: "foundParam"}};
       const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
         callback();
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
-        callback();
+      const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+        callback(null, 'OK');
       });
 
-      await middleware(req, res, () => { return "next" });
-      expect(getCall.calledOnce).to.eql(true);
-      expect(setCall.calledOnce).to.eql(true);
-      expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
+      middleware(req, res, () => { 
+        expect(getCall.calledOnce).to.eql(true);
+        expect(setCall.calledOnce).to.eql(true);
+        expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
+      });
     });
 
     it("if lookup does not exist, and checkForKeyOnly is true it should call next", async () => {
@@ -175,47 +176,55 @@ describe("Middleware", () => {
       expect(req.uniqueRequestKey).to.be.undefined;
     });
 
-    it.skip("if the same key is sent before the first has expired, it should reject the second call", async () => {
-      sandbox.spy(redis, "get");
-      sandbox.spy(redis, "set");
-      sandbox.spy(res, "send");
+    it("if the same key is sent before the first has expired, it should reject the second call", (done) => {
+      res.status = (code) => {
+        return {
+          send(message) {
+            expect(code).to.eql(409);
+            expect(message).to.eql("test message");
+            done();
+          }
+        };
+      };
       expiringKey = new ExpiringKey(redis);
-      const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method"});
-      const req = {body: {paramToFind: "foundParam"}};
 
-      await middleware(req, res, async () => { 
-        //expect(redis.get.calledOnce).to.eql(true);
-        //expect(redis.set.calledOnce).to.eql(true);
-        expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
-        //expect(res.send.calledOnce).to.eql(false);
-        
-        const result = await middleware(req, res, () => { 
-          //expect(redis.get.calledTwice).to.eql(true);
-          //expect(redis.set.calledOnce).to.eql(true);
-          
-        });
-        expect(res.send.calledOnce).to.eql(true);
-      });
-    });
-    
-    it("if lookup exists, and db returns a value it should call onKeyFound, with a custom message", async () => {
-      expiringKey = new ExpiringKey(redis);
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", message: "test message"});
+      
       const req = {body: {paramToFind: "foundParam"}};
       const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
-        callback(null, "processed");
+        callback(null, null);
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
-        callback();
-      });      
-      sandbox.spy(res, "send");
-      const result = await middleware(req, res, () => { return "next" });
+ 
+      middleware(req, res, () => {
+        return middleware(req, res, () => { 
+          expect(true).to.eql(false);
+          done();
+        });
+      });
+    }); 
+    
+    it("if lookup exists, and db returns a value it should call onKeyFound, with a custom message", (done) => {
+      res.status = (code) => {
+        return {
+          send(message) {
+            expect(code).to.eql(409);
+            expect(message).to.eql("test message");
+            done();
+          }
+        };
+      };
+      expiringKey = new ExpiringKey(redis);
 
-      expect(res.send.returnValues[0].code).to.eql(409);
-      expect(res.send.returnValues[0].message).to.eql("test message");
-      expect(getCall.calledOnce).to.eql(true);
-      expect(setCall.calledOnce).to.eql(false);
-      expect(res.send.calledOnce).to.eql(true);
+      const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", message: "test message"});
+      
+      const req = {body: {paramToFind: "foundParam"}};
+ 
+      middleware(req, res, () => {
+        return middleware(req, res, () => { 
+          expect(true).to.eql(false);
+          done();
+        });
+      });
     });       
   });
 });

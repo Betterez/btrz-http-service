@@ -35,7 +35,7 @@
     "mocha": "latest",
     "eslint": "^4.19.1",
     "eslint-plugin-mocha": "^4.9.0",
-    "redis": "^2.8.0",
+    "redis": "^3.1.2",
     "sinon": "^4.5.0"
   }
 }
