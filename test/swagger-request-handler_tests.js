@@ -76,6 +76,24 @@ describe("SwaggerRequestHandler", () => {
     expect(swaggerHandler.spec.security[0].JwtAuth).to.equal(undefined);
   });
 
+  it("should create object with action that calls the given handler and add ApiKeyAuth and BasicAuth security object", () => {
+    const handlerInstance = new HandlerWithSecurityClass();
+    function authenticate() {
+      return true;
+    }
+    function authToken() {
+      // eslint-disable-next-line func-names
+      return function () {
+        return authenticate();
+      };
+    }
+    const swaggerHandler = swaggerRequestHandler(authToken, handlerInstance);
+
+    expect(swaggerHandler.spec.method).to.equal("POST");
+    expect(swaggerHandler.spec.security[0].ApiKeyAuth.length).to.equal(0);
+    expect(swaggerHandler.spec.security[0].BasicAuth.length).to.equal(0);
+  });
+
   it("should create object with action that executes middlewares before calling the given handler", (done) => {
     const handlerInstance = new HandlerClass();
     const request = {fn: done};
