@@ -95,15 +95,24 @@ describe("attachHandlerToExpressServer()", () => {
     });
   }
 
+  async function dropCollection(db, collectionName) {
+    const [collection] = await db.listCollections({name: collectionName}).toArray();
+    if (collection) {
+      await db.dropCollection(collectionName);
+    }
+  }
+
   before(async () => {
     const db = await new SimpleDao(authenticatorConfig).connect();
 
     // Check that the database name is the one that we configured for this test, to avoid making changes to
     // one of our public databases
     expect(db.databaseName).to.eql("btrz_http_service_test");
+
+    await dropCollection(db, authenticatorConfig.collection.name);
     await Promise.all([
-      db.dropCollection(authenticatorConfig.collection.name),
-      db.dropCollection("users")
+      dropCollection(db, authenticatorConfig.collection.name),
+      dropCollection(db, "users")
     ]);
 
     await Promise.all([
