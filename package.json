@@ -28,6 +28,7 @@
   "homepage": "https://github.com/Betterez/btrz-http-service#readme",
   "dependencies": {
     "express-mung": "^0.5.1",
+    "lodash.isplainobject": "^4.0.6",
     "swagger-validation": "git+ssh://github.com/Betterez/swagger-validation.git#v9.2.0"
   },
   "devDependencies": {

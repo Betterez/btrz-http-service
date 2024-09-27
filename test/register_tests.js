@@ -405,6 +405,47 @@ describe("attachHandlerToExpressServer()", () => {
         });
     });
 
+    it("should allow the behaviour of the request validation to be overridden in the handler configuration", async () => {
+      handlerConfiguration.validationSettings = {
+        improvedErrorMessages: false
+      };
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({}) // Request body is an empty object.  The handler spec doesn't allow this
+        .expect(400)
+        .expect({
+          code: "WRONG_DATA",
+          message: "someProperty is required"
+        });
+    });
+
+    it("should throw an error if the 'validationSettings' in the handler configuration is not an object", () => {
+      handlerConfiguration.validationSettings = "some string";
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
+        .to.throw(
+          "HandlerClass has invalid 'validationSettings'.  " +
+          "The 'validationSettings' returned by the 'configuration()' function should be an object"
+      );
+    });
+
     it("should allow the handler to set the HTTP response code", async () => {
       class HandlerClass {
         getSpec = sinon.stub().returns(handlerSpec);
