@@ -455,6 +455,73 @@ describe("attachHandlerToExpressServer()", () => {
       );
     });
 
+    it("should allow custom middleware to be provided in the handler configuration, and execute that middleware after the authorization middleware but before the handler function", async () => {
+      const authenticationMiddleware = sinon.stub().yields();
+      sinon.stub(authenticator, "getMiddlewareForAuthPolicy").returns(authenticationMiddleware)
+
+      handlerConfiguration.middleware = [
+        sinon.stub().yields(),
+        sinon.stub().yields()
+      ];
+
+      const handler = sinon.stub();
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = handler;
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({someProperty: "ABC"})
+        .expect(200);
+
+      expect(authenticationMiddleware).to.have.been.calledOnce;
+      expect(handlerConfiguration.middleware[0]).to.have.been.calledOnce;
+      expect(handlerConfiguration.middleware[1]).to.have.been.calledOnce;
+      expect(handler).to.have.been.calledOnce;
+
+      expect(authenticationMiddleware).to.have.been.calledImmediatelyBefore(handlerConfiguration.middleware[0]);
+      expect(handlerConfiguration.middleware[0]).to.have.been.calledImmediatelyBefore(handlerConfiguration.middleware[1]);
+      expect(handlerConfiguration.middleware[1]).to.have.been.calledImmediatelyBefore(handler);
+    });
+
+    it("should throw an error if the 'middleware' in the handler configuration is not an array", () => {
+      handlerConfiguration.middleware = sinon.stub();
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
+        .to.throw(
+          "HandlerClass has invalid 'middleware'.  The 'middleware' returned by the 'configuration()' function should be an array."
+        );
+    });
+
+    it("should throw an error if the 'middleware' array in the handler configuration contains an entry that is not a function", () => {
+      handlerConfiguration.middleware = [sinon.stub(), "A"];
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
+        .to.throw(
+          "HandlerClass has invalid 'middleware'.  At least one middleware is not a function.  " +
+          "Each item in the 'middleware' array should be an Express middleware function."
+        );
+    });
+
     it("should allow the handler to set the HTTP response code", async () => {
       class HandlerClass {
         getSpec = sinon.stub().returns(handlerSpec);
