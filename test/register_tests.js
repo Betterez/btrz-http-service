@@ -491,6 +491,35 @@ describe("attachHandlerToExpressServer()", () => {
       expect(handlerConfiguration.middleware[1]).to.have.been.calledImmediatelyBefore(handler);
     });
 
+    it("should return the expected response if the custom middleware yields an error", async () => {
+      handlerConfiguration.middleware = [
+        sinon.stub().yields(new Error("Some error from middleware"))
+      ];
+
+      const handler = sinon.stub();
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({someProperty: "ABC"})
+        .expect(500)
+        .expect({
+          code: "Some error from middleware",
+          message: "Some error from middleware"
+        });
+
+      expect(handler).not.to.have.been.called;
+    });
+
     it("should throw an error if the 'middleware' in the handler configuration is not an array", () => {
       handlerConfiguration.middleware = sinon.stub();
 
