@@ -124,6 +124,7 @@ describe("attachHandlerToExpressServer()", () => {
   beforeEach(() => {
     expressApp = express();
     mockLogger = {
+      debug: sinon.stub(),
       info: sinon.stub(),
       error: sinon.stub(),
     };
@@ -165,6 +166,7 @@ describe("attachHandlerToExpressServer()", () => {
     dependencies = {
       authenticator: authenticator,
       swagger: btrzSwaggerExpress,
+      logger: mockLogger
     };
 
     expressApp.use(authenticator.initialize({userProperty: "account"}));
@@ -412,6 +414,31 @@ describe("attachHandlerToExpressServer()", () => {
           code: "WRONG_DATA",
           message: "Request body is invalid: someProperty is required but is missing"
         });
+    });
+
+    it("should log when the incoming request was modified, and properties were deleted from the request", async () => {
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({
+          someProperty: 'ABC',
+          someUnrecognizedProperty: 'DEF' // This property is not described in the handler's spec
+        })
+        .expect(200);
+
+      expect(mockLogger.debug).to.have.been.calledWith(
+        "The incoming request contains data that is not described in the handler\'s schema.  " +
+        "The following properties were removed from the request body: someUnrecognizedProperty"
+      );
     });
 
     it("should allow the behaviour of the request validation to be overridden in the handler configuration", async () => {
