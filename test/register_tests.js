@@ -127,6 +127,7 @@ describe("attachHandlerToExpressServer()", () => {
       debug: sinon.stub(),
       info: sinon.stub(),
       error: sinon.stub(),
+      fatal: sinon.stub()
     };
     models = {};
     handlerSpec = {
@@ -187,7 +188,7 @@ describe("attachHandlerToExpressServer()", () => {
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      expect(HandlerClass.register).to.have.been.calledOnceWith(dependencies);
+      expect(HandlerClass.register).to.have.been.calledOnceWithExactly(dependencies);
     });
   });
 
@@ -205,7 +206,7 @@ describe("attachHandlerToExpressServer()", () => {
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      expect(constructorSpy).to.have.been.calledOnceWith(dependencies);
+      expect(constructorSpy).to.have.been.calledOnceWithExactly(dependencies);
     });
 
     it("should allow the handler class' getSpec() method to be static", () => {
@@ -416,6 +417,32 @@ describe("attachHandlerToExpressServer()", () => {
         });
     });
 
+    it("should log when the incoming request failed validation against the OpenAPI spec", async () => {
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({}) // Request body is an empty object.  The handler spec doesn't allow this
+        .expect(400);
+
+      expect(mockLogger.error).to.have.been.calledOnceWithExactly(
+        "Validation Failed ON http-response-handlers",
+        {
+          status: 400,
+          code: 'WRONG_DATA',
+          message: 'Request body is invalid: someProperty is required but is missing'
+        }
+      );
+    });
+
     it("should log when the incoming request was modified, and properties were deleted from the request", async () => {
       class HandlerClass {
         getSpec = sinon.stub().returns(handlerSpec);
@@ -620,6 +647,29 @@ describe("attachHandlerToExpressServer()", () => {
         });
     });
 
+    it("should log when the handler rejects", async () => {
+      const handlerError = new Error("Some unexpected error");
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = async () => {
+          throw handlerError;
+        };
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({someProperty: 'ABC'})
+        .expect(500);
+
+      expect(mockLogger.fatal).to.have.been.calledOnceWithExactly("ERROR ON http-response-handlers.error", handlerError);
+    });
+
     it(`should call the handler's "onHandlerError" method when the handler rejects, if this function is defined`, async () => {
       const handlerError = new Error("Some unexpected error");
       const onHandlerError = sinon.stub();
@@ -645,7 +695,7 @@ describe("attachHandlerToExpressServer()", () => {
           code: "Some unexpected error",
           message: "Some unexpected error",
         });
-      expect(onHandlerError).to.have.been.calledOnceWith(handlerError);
+      expect(onHandlerError).to.have.been.calledOnceWithExactly(handlerError);
     });
 
     it(`should allow the handler's "onHandlerError" function to be a static function`, async () => {
@@ -673,7 +723,7 @@ describe("attachHandlerToExpressServer()", () => {
           code: "Some unexpected error",
           message: "Some unexpected error",
         });
-      expect(onHandlerError).to.have.been.calledOnceWith(handlerError);
+      expect(onHandlerError).to.have.been.calledOnceWithExactly(handlerError);
     });
 
     it(`should allow developers to map errors which occur in the handler by returning a new error from the "onHandlerError" method`, async () => {
