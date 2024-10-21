@@ -468,6 +468,53 @@ describe("attachHandlerToExpressServer()", () => {
       );
     });
 
+    it("should log when the incoming request was modified, and 'null' values were removed from the request", async () => {
+      handlerConfiguration.validationSettings = {
+        replaceValues: true,
+        allPropertiesAreNullableByDefault: true,
+        removeNullValuesFromObjects: true,
+        removeNullValuesFromArrays: true
+      };
+
+      handlerSpec.parameters[0].schema = {
+        type: "object",
+        properties: {
+          someProperty: {
+            type: "string"
+          },
+          someArray: {
+            type: "array",
+            items: {
+              type: "integer"
+            }
+          }
+        }
+      };
+
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = sinon.stub();
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({
+          someProperty: null,
+          someArray: [null, 1, null, 2]
+        })
+        .expect(200);
+
+      expect(mockLogger.debug).to.have.been.calledWith(
+        "The incoming request contains 'null' values which have been removed.  " +
+        "The following values were removed from the request body: someProperty, someArray[0], someArray[2]"
+      );
+    });
+
     it("should allow the behaviour of the request validation to be overridden in the handler configuration", async () => {
       handlerConfiguration.validationSettings = {
         improvedErrorMessages: false
