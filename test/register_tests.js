@@ -671,6 +671,34 @@ describe("attachHandlerToExpressServer()", () => {
         .expect(304);
     });
 
+    it("should allow the handler to send content that is not JSON", async () => {
+      class HandlerClass {
+        getSpec = sinon.stub().returns(handlerSpec);
+        configuration = sinon.stub().returns(handlerConfiguration);
+        handler = (req, res) => {
+          res.setHeader("Content-Type", "application/pdf");
+          res.send("Some PDF data");
+        };
+      }
+
+      attachHandlerToExpressServer(HandlerClass, models, dependencies);
+
+      const response = await request(expressApp)
+        .post(handlerSpec.path)
+        .set("X-API-KEY", apiKey)
+        .set("Authorization", `Bearer ${jwtToken}`)
+        .send({someProperty: 'ABC'})
+        .expect(200);
+
+      expect(response.headers).to.contain({
+        "content-type": "application/pdf; charset=utf-8",
+        "content-length": "13" // Length of content provided to res.send(...)
+      });
+      expect(response.type).to.eql("application/pdf");
+      expect(response.body).to.be.an.instanceof(Buffer);
+      expect(response.body.toString()).to.eql("Some PDF data");
+    });
+
     it("should return the expected response when the handler rejects", async () => {
       class HandlerClass {
         getSpec = sinon.stub().returns(handlerSpec);
