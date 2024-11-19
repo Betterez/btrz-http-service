@@ -35,7 +35,7 @@
     "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.11.1",
     "body-parser": "^1.20.3",
-    "btrz-auth-api-key": "5.6.0",
+    "btrz-auth-api-key": "5.7.0",
     "btrz-simple-dao": "^4.4.2",
     "btrz-swagger-express": "git+ssh://github.com/Betterez/btrz-swagger-express.git#v3.0.0",
     "chai": "^4.5.0",
