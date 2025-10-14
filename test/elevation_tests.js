@@ -1,4 +1,4 @@
-describe.only("userPermissionElevation", () => {
+describe("userPermissionElevation", () => {
   const expect = require("chai").expect;
   const {userPermissionElevation} = require("../index.js");
   const {redirectToElevatePermissions} = userPermissionElevation;
