@@ -100,7 +100,7 @@ describe("userPermissionElevation", () => {
           ticketIds: [123, 456],
         }
       }
-      req.session.elevationToken = jwt.sign({user: req.user, action}, "somthing-not-so-secret", {expiresIn: "30m" });
+      req.session.elevationToken = jwt.sign({user: req.user, action}, "somthing-not-so-secret-again", {expiresIn: "30m" });
       res.redirect = (url) => {
         expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
         done();
