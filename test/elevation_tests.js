@@ -48,7 +48,7 @@ describe("userPermissionElevation", () => {
       redirectToElevatePermissions(req, res, action, delegate);
     });
 
-    it("Given a delegate that returns true and the elevationToken is present but invalid it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+    it("Given a delegate that returns true and the elevationToken is present but with invalid data it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
       function delegate() {
         return true;
       }
@@ -68,6 +68,46 @@ describe("userPermissionElevation", () => {
       redirectToElevatePermissions(req, res, action, delegate);
     });
 
+    it("Given a delegate that returns true and the elevationToken is present but with invalid name it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+      function delegate() {
+        return true;
+      }
+      action = {
+        name: "move_ticket",
+        requestedUrl: "/tickets/123/move",
+        redirectUrl: "/elevate",
+        data: {
+          ticketIds: [123, 456],
+        }
+      }
+      req.session.elevationToken = getElevationToken({name: "move_ticket2", data: {ticketIds: [123, 456]}});
+      res.redirect = (url) => {
+        expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
+        done();
+      };
+      redirectToElevatePermissions(req, res, action, delegate);
+    });
+
+    it("Given a delegate that returns true and the elevationToken is present but with invalid signature it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+      function delegate() {
+        return true;
+      }
+      action = {
+        name: "move_ticket",
+        requestedUrl: "/tickets/123/move",
+        redirectUrl: "/elevate",
+        data: {
+          ticketIds: [123, 456],
+        }
+      }
+      req.session.elevationToken = jwt.sign({user: req.user, action}, "somthing-not-so-secret", {expiresIn: "30m" });
+      res.redirect = (url) => {
+        expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
+        done();
+      };
+      redirectToElevatePermissions(req, res, action, delegate);
+    });
+  
     it("should return true if action doesn't have a redirect URL and the delegate returns true and no valid token is present", () => {
       function delegate() {
         return true;
