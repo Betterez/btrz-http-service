@@ -225,6 +225,53 @@ describe("Middleware", () => {
           done();
         });
       });
-    });       
+    });
+    
+    it("should add the key if setKey is called directly outside of the middleware", (done) => {
+      res.status = (code) => {
+        return {
+          send(message) {
+            expect(code).to.eql(409);
+            expect(message).to.eql("test message");
+            done();
+          }
+        };
+      };
+      expiringKey = new ExpiringKey(redis);
+      
+      const key = "foundParam";
+ 
+      expiringKey.setKey(key, 10000, (err, result) => {
+          if (!result) {
+            done("Key was unexpectedly not set");
+          }
+
+          expect(result).to.exist.eq("OK");
+          done();
+        });
+    });
+
+    it("should add the key if setKey is called directly outside of the middleware", (done) => {
+      res.status = (code) => {
+        return {
+          send(message) {
+            expect(code).to.eql(409);
+            expect(message).to.eql("test message");
+            done();
+          }
+        };
+      };
+      expiringKey = new ExpiringKey(redis);
+      
+      const key = "foundParam";
+ 
+      expiringKey.setKey(key, 10000, (err, result) => {
+        expect(result).to.exist.eq("OK");
+        expiringKey.setKey(key, 10000, (err, result) => {
+          expect(result).to.be.null;
+          done();
+        });
+      });
+    });
   });
 });
