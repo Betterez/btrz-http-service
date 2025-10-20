@@ -251,7 +251,7 @@ describe("Middleware", () => {
         });
     });
 
-    it("should add the key if setKey is called directly outside of the middleware", (done) => {
+    it("should return null if setKey is called directly outside of the middleware and the key already exists", (done) => {
       res.status = (code) => {
         return {
           send(message) {
