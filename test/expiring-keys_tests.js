@@ -274,4 +274,286 @@ describe("Middleware", () => {
       });
     });
   });
+
+  describe("checkAndSetKey()", () => {
+    let sandbox = null;
+    let expiringKey = null;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      expiringKey = new ExpiringKey(redis);
+    });
+
+    afterEach(function () {
+      sandbox.restore();
+      redis.flushdb();
+    });
+
+    describe("when called as middleware", () => {
+      it("should work exactly like the middleware function", (done) => {
+        const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
+        const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
+        const next = () => {
+          expect(true).to.be.true;
+          done();
+        };
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, null);
+        });
+        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+          callback(null, 'OK');
+        });
+
+        expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(getCall.calledOnce).to.eql(true);
+        expect(setCall.calledOnce).to.eql(true);
+      });
+
+      it("should return next when no lookup is provided", () => {
+        const req = { path: "/test", method: "POST" };
+        const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
+        const next = () => "next";
+        const opts = {};
+
+        const result = expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(result).to.eql("next");
+      });
+
+      it("should return next when path is not found", () => {
+        const req = { body: { paramToFind: "foundParam" } };
+        const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
+        const next = () => "next";
+        const opts = { lookup: "body.paramToFind" };
+
+        const result = expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(result).to.eql("next");
+      });
+
+      it("should return next when method is not found", () => {
+        const req = { path: "/test", body: { paramToFind: "foundParam" } };
+        const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
+        const next = () => "next";
+        const opts = { lookup: "body.paramToFind", path: "path" };
+
+        const result = expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(result).to.eql("next");
+      });
+
+      it("should handle database errors gracefully", (done) => {
+        const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
+        const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
+        const next = () => {
+          expect(true).to.be.true;
+          done();
+        };
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback({ err: true });
+        });
+
+        expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(getCall.calledOnce).to.eql(true);
+      });
+
+      it("should call onKeyFound when key exists in database", (done) => {
+        const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
+        const res = { 
+          status: (code) => ({ 
+            send: (message) => {
+              expect(code).to.eql(409);
+              expect(message).to.eql("A blocking key was found");
+              done();
+            }
+          }) 
+        };
+        const next = () => "next";
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, "processed");
+        });
+
+        expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(getCall.calledOnce).to.eql(true);
+      });
+
+      it("should set uniqueRequestKey when key is successfully set", (done) => {
+        const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
+        const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
+        const next = () => {
+          expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
+          done();
+        };
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, null);
+        });
+        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+          callback(null, 'OK');
+        });
+
+        expiringKey.checkAndSetKey({ req, res, next, opts });
+        expect(getCall.calledOnce).to.eql(true);
+        expect(setCall.calledOnce).to.eql(true);
+      });
+    });
+
+    describe("when called directly", () => {
+      it("should work with direct data object", (done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
+        };
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, null);
+        });
+        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+          callback(null, 'OK');
+        });
+
+        expiringKey.checkKey(data, opts, (err, result) => {
+          expect(err).to.be.null;
+          expect(result.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
+          expect(getCall.calledOnce).to.eql(true);
+          expect(setCall.calledOnce).to.eql(true);
+          done();
+        });
+      });
+
+      it("should handle key found scenario in direct call", (done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
+        };
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, "processed");
+        });
+
+        expiringKey.checkKey(data, opts, (err, result) => {
+          expect(err).to.be.an('error');
+          expect(err.message).to.include("A blocking key was found");
+          expect(result).to.be.null;
+          expect(getCall.calledOnce).to.eql(true);
+          done();
+        });
+      });
+
+      it("should handle database errors in direct call", (done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
+        };
+        const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback({ err: true });
+        });
+
+        expiringKey.checkKey(data, opts, (err, result) => {
+          expect(err).to.be.null;
+          expect(result.key).to.be.undefined;
+          expect(getCall.calledOnce).to.eql(true);
+          done();
+        });
+      });
+
+      it("should handle checkForKeyOnly option in direct call", (done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
+        };
+        const opts = { 
+          lookup: "body.paramToFind", 
+          path: "path", 
+          method: "method", 
+          checkForKeyOnly: true 
+        };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, null);
+        });
+        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+          callback(null, 'OK');
+        });
+
+        expiringKey.checkKey(data, opts, (err, result) => {
+          expect(err).to.be.null;
+          expect(result.key).to.be.undefined;
+          expect(getCall.calledOnce).to.eql(true);
+          expect(setCall.calledOnce).to.eql(false);
+          done();
+        });
+      });
+
+      it("should handle custom onKeyFound handler in direct call", (done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
+        };
+        const customHandler = (req, res, next) => {
+          res.status(418).send("Custom message");
+        };
+        const opts = { 
+          lookup: "body.paramToFind", 
+          path: "path", 
+          method: "method",
+          onKeyFound: customHandler
+        };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, "processed");
+        });
+
+        expiringKey.checkKey(data, opts, (err, result) => {
+          expect(err).to.be.an('error');
+          expect(err.message).to.include("Custom message");
+          expect(result).to.be.null;
+          expect(getCall.calledOnce).to.eql(true);
+          done();
+        });
+      });
+
+      it("should handle complex lookup configurations in direct call", (done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" },
+          altBody: { altNewKey: "altValue" }
+        };
+        const opts = { 
+          lookup: { keyName: "body.paramToFind", alternateKeyName: "altBody.altNewKey" },
+          path: "path", 
+          method: "method"
+        };
+
+        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+          callback(null, null);
+        });
+        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+          callback(null, 'OK');
+        });
+
+        expiringKey.checkKey(data, opts, (err, result) => {
+          expect(err).to.be.null;
+          expect(result.uniqueRequestKey).to.eql("key:path:method:altBody.altNewKey:foundParam");
+          expect(getCall.calledOnce).to.eql(true);
+          expect(setCall.calledOnce).to.eql(true);
+          done();
+        });
+      });
+    });
+  });
 });
