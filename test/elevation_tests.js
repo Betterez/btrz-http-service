@@ -50,7 +50,7 @@ describe("userPermissionElevation", () => {
     });
   });
 
-  describe("#needsToElevatePermissions()", () => {
+  describe("#redirectToElevatePermissions()", () => {
     it("Given a delegate that returns true and the elevationToken is not present it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
       function delegate() {
         return true;
@@ -149,6 +149,31 @@ describe("userPermissionElevation", () => {
         done();
       };
       const result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      expect(result).to.equal(false);
+    });
+
+    it("should return false when the action data stored in the elevation token and the action data provided as an argument have the same data, but the order of array data is different", () => {
+      // It is expected that developers will provide array data in different order.  For example, if the action data contains an array of
+      // ticket IDs, they may be added to the action as `ticketIds: [1, 2]` or `ticketIds: [2, 1]`.  When checking if an elevation token is
+      // valid for a particular action, we do not want the algorithm to be sensitive to the order of the array data (a token that was issued
+      // for `ticketIds: [1, 2]` should be considered valid for `ticketIds: [2, 1]` as well).
+      function delegate() {
+        return true;
+      }
+
+      action = {
+        name: "move_ticket",
+        redirectUrl: "",
+        data: {
+          tickets: [{_id: 1}, {_id: 2}],
+        }
+      }
+      req.session.elevationToken = getElevationToken(req.user, privateKey, action);
+      let result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      expect(result).to.equal(false);
+
+      action.data.tickets = [{_id: 2}, {_id: 1}];
+      result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
       expect(result).to.equal(false);
     });
 

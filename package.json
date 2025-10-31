@@ -30,6 +30,7 @@
   "dependencies": {
     "express-mung": "^0.5.1",
     "lodash.isplainobject": "^4.0.6",
+    "object-hash": "3.0.0",
     "jsonwebtoken": "8.5.1",
     "swagger-validation": "git+ssh://github.com/Betterez/swagger-validation.git#v10.1.1"
   },
