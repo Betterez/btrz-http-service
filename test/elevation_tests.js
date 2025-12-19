@@ -3,6 +3,8 @@ describe("userPermissionElevation", () => {
   const jwt = require("jsonwebtoken");
   const expect = require("chai").expect;
   const sinon = require("sinon");
+  const Chance = require("chance");
+  const chance = new Chance();
   const {SimpleDao} = require("btrz-simple-dao");
   const {userPermissionElevation} = require("../index.js");
   const {redirectToElevatePermissions} = userPermissionElevation;
@@ -14,6 +16,7 @@ describe("userPermissionElevation", () => {
   let res = {};
   let logger;
   let action = {};
+  let delegator;
   let privateKey;
 
   beforeEach(() => {
@@ -29,6 +32,10 @@ describe("userPermissionElevation", () => {
       action: "test",
       redirectUrl: "/elevate"
     };
+    delegator = {
+      _id: SimpleDao.objectId(),
+      email: chance.email()
+    };
     privateKey = crypto.randomBytes(32).toString('hex');
   });
 
@@ -38,8 +45,10 @@ describe("userPermissionElevation", () => {
 
   describe("#getElevationToken()", () => {
     it("should return the elevation token", () => {
-      const result = getElevationToken(req.user, privateKey, action);
-      expect(result).to.equal(jwt.sign({user: req.user, action}, privateKey, {expiresIn: "30m" }));
+      const result = getElevationToken(req.user, privateKey, action, delegator);
+      expect(result).to.equal(
+        jwt.sign({user: req.user, action, delegator: {_id: delegator._id.toString()}}, privateKey, {expiresIn: "30m" })
+      );
     });
   });
 
