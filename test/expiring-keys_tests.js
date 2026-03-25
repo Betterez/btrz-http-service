@@ -34,6 +34,7 @@ describe("Middleware", () => {
     });
 
     afterEach(function () {
+      sinon.restore();
       sandbox.restore();
       redis.flushdb();
     })
@@ -554,6 +555,18 @@ describe("Middleware", () => {
           done();
         });
       });
+    });
+  });
+
+  describe(".clean()", () => {
+    it("should do nothing if the provided key is undefined or null", () => {
+      sinon.stub(redis, "del");
+
+      expiringKey.clean(undefined);
+      expect(redis.del.notCalled).to.be.true;
+
+      expiringKey.clean(null);
+      expect(redis.del.notCalled).to.be.true;
     });
   });
 });
