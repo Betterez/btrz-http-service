@@ -2,7 +2,7 @@
 
 describe("Middleware", () => {
   const expect = require("chai").expect;
-  const sinon = require("sinon");  
+  const sinon = require("sinon");
   const ExpiringKey = require("../lib/expiring-keys");
   const redis = require("redis").createClient();
   const res = {
@@ -74,8 +74,8 @@ describe("Middleware", () => {
       });
       const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
         callback();
-      });      
-      middleware(req, res, () => { 
+      });
+      middleware(req, res, () => {
         expect(getCall.calledOnce).to.eql(true);
         expect(setCall.calledOnce).to.eql(false);
       });
@@ -90,7 +90,7 @@ describe("Middleware", () => {
       });
       const setCall = sandbox.stub(redis, "set").callsFake((key, value, lock, index, expire, callback) => {
         callback();
-      });      
+      });
       sandbox.spy(res, "send");
       const result = await middleware(req, res, () => { return "next" });
 
@@ -112,7 +112,7 @@ describe("Middleware", () => {
         callback(null, 'OK');
       });
 
-      middleware(req, res, () => { 
+      middleware(req, res, () => {
         expect(getCall.calledOnce).to.eql(true);
         expect(setCall.calledOnce).to.eql(true);
         expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
@@ -189,20 +189,20 @@ describe("Middleware", () => {
       expiringKey = new ExpiringKey(redis);
 
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", message: "test message"});
-      
+
       const req = {body: {paramToFind: "foundParam"}};
       const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
         callback(null, null);
       });
- 
+
       middleware(req, res, () => {
-        return middleware(req, res, () => { 
+        return middleware(req, res, () => {
           expect(true).to.eql(false);
           done();
         });
       });
-    }); 
-    
+    });
+
     it("if lookup exists, and db returns a value it should call onKeyFound, with a custom message", (done) => {
       res.status = (code) => {
         return {
@@ -216,17 +216,17 @@ describe("Middleware", () => {
       expiringKey = new ExpiringKey(redis);
 
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", message: "test message"});
-      
+
       const req = {body: {paramToFind: "foundParam"}};
- 
+
       middleware(req, res, () => {
-        return middleware(req, res, () => { 
+        return middleware(req, res, () => {
           expect(true).to.eql(false);
           done();
         });
       });
     });
-    
+
     it("should add the key if setKey is called directly outside of the middleware", (done) => {
       res.status = (code) => {
         return {
@@ -238,9 +238,9 @@ describe("Middleware", () => {
         };
       };
       expiringKey = new ExpiringKey(redis);
-      
+
       const key = "foundParam";
- 
+
       expiringKey.setKey(key, 10000, (err, result) => {
           if (!result) {
             done("Key was unexpectedly not set");
@@ -262,9 +262,9 @@ describe("Middleware", () => {
         };
       };
       expiringKey = new ExpiringKey(redis);
-      
+
       const key = "foundParam";
- 
+
       expiringKey.setKey(key, 10000, (err, result) => {
         expect(result).to.exist.eq("OK");
         expiringKey.setKey(key, 10000, (err, result) => {
@@ -360,14 +360,14 @@ describe("Middleware", () => {
 
       it("should call onKeyFound when key exists in database", (done) => {
         const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
-        const res = { 
-          status: (code) => ({ 
+        const res = {
+          status: (code) => ({
             send: (message) => {
               expect(code).to.eql(409);
               expect(message).to.eql("A blocking key was found");
               done();
             }
-          }) 
+          })
         };
         const next = () => "next";
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
@@ -404,10 +404,10 @@ describe("Middleware", () => {
 
     describe("when called directly", () => {
       it("should work with direct data object", (done) => {
-        const data = { 
-          path: "/test", 
-          method: "POST", 
-          body: { paramToFind: "foundParam" } 
+        const data = {
+          path: "/test",
+          method: "POST",
+          body: { paramToFind: "foundParam" }
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
@@ -428,10 +428,10 @@ describe("Middleware", () => {
       });
 
       it("should handle key found scenario in direct call", (done) => {
-        const data = { 
-          path: "/test", 
-          method: "POST", 
-          body: { paramToFind: "foundParam" } 
+        const data = {
+          path: "/test",
+          method: "POST",
+          body: { paramToFind: "foundParam" }
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
@@ -449,10 +449,10 @@ describe("Middleware", () => {
       });
 
       it("should handle database errors in direct call", (done) => {
-        const data = { 
-          path: "/test", 
-          method: "POST", 
-          body: { paramToFind: "foundParam" } 
+        const data = {
+          path: "/test",
+          method: "POST",
+          body: { paramToFind: "foundParam" }
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
@@ -469,16 +469,16 @@ describe("Middleware", () => {
       });
 
       it("should handle checkForKeyOnly option in direct call", (done) => {
-        const data = { 
-          path: "/test", 
-          method: "POST", 
-          body: { paramToFind: "foundParam" } 
+        const data = {
+          path: "/test",
+          method: "POST",
+          body: { paramToFind: "foundParam" }
         };
-        const opts = { 
-          lookup: "body.paramToFind", 
-          path: "path", 
-          method: "method", 
-          checkForKeyOnly: true 
+        const opts = {
+          lookup: "body.paramToFind",
+          path: "path",
+          method: "method",
+          checkForKeyOnly: true
         };
 
         const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
@@ -498,17 +498,17 @@ describe("Middleware", () => {
       });
 
       it("should handle custom onKeyFound handler in direct call", (done) => {
-        const data = { 
-          path: "/test", 
-          method: "POST", 
-          body: { paramToFind: "foundParam" } 
+        const data = {
+          path: "/test",
+          method: "POST",
+          body: { paramToFind: "foundParam" }
         };
         const customHandler = (req, res, next) => {
           res.status(418).send("Custom message");
         };
-        const opts = { 
-          lookup: "body.paramToFind", 
-          path: "path", 
+        const opts = {
+          lookup: "body.paramToFind",
+          path: "path",
           method: "method",
           onKeyFound: customHandler
         };
@@ -527,15 +527,15 @@ describe("Middleware", () => {
       });
 
       it("should handle complex lookup configurations in direct call", (done) => {
-        const data = { 
-          path: "/test", 
-          method: "POST", 
+        const data = {
+          path: "/test",
+          method: "POST",
           body: { paramToFind: "foundParam" },
           altBody: { altNewKey: "altValue" }
         };
-        const opts = { 
+        const opts = {
           lookup: { keyName: "body.paramToFind", alternateKeyName: "altBody.altNewKey" },
-          path: "path", 
+          path: "path",
           method: "method"
         };
 
