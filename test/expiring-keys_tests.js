@@ -1,8 +1,9 @@
 "use strict";
+const {describe, it, beforeEach, afterEach} = require("node:test");
+const assert = require("node:assert/strict");
 
 describe("Middleware", () => {
-  const expect = require("chai").expect;
-  const sinon = require("sinon");
+  const sinon = require("sinon");  
   const ExpiringKey = require("../lib/expiring-keys");
   const redis = require("redis").createClient();
   const res = {
@@ -42,28 +43,28 @@ describe("Middleware", () => {
     it("if no options values passed, should return next()", () => {
       const middleware = expiringKey.middleWare({});
       const result = middleware({}, {}, () => { return "next"});
-      expect(result).to.eql("next");
+      assert.equal(result, "next");
     });
 
     it("if path value not found, should return next", () => {
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind"});
       const req = {body: {paramToFind: "param"}};
       const result = middleware(req, {}, () => { return "next"});
-      expect(result).to.eql("next");
+      assert.equal(result, "next");
     });
 
     it("if method value not found, should return next", () => {
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", "path": "path"});
       const req = {body: {}};
       const result = middleware(req, {}, () => { return "next"});
-      expect(result).to.eql("next");
+      assert.equal(result, "next");
     });
 
     it("if lookup not found in the request, should return next", () => {
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method"});
       const req = {body: {}};
       const result = middleware(req, {}, () => { return "next" });
-      expect(result).to.eql("next");
+      assert.equal(result, "next");
     });
 
     it("if lookup exists, and db returns an error it should return next", () => {
@@ -75,10 +76,10 @@ describe("Middleware", () => {
       });
       const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
         callback();
-      });
-      middleware(req, res, () => {
-        expect(getCall.calledOnce).to.eql(true);
-        expect(setCall.calledOnce).to.eql(false);
+      });      
+      middleware(req, res, () => { 
+        assert.equal(getCall.calledOnce, true);
+        assert.equal(setCall.calledOnce, false);
       });
     });
 
@@ -95,11 +96,11 @@ describe("Middleware", () => {
       sandbox.spy(res, "send");
       const result = await middleware(req, res, () => { return "next" });
 
-      expect(res.send.returnValues[0].code).to.eql(409);
-      expect(res.send.returnValues[0].message).to.eql("A blocking key was found");
-      expect(getCall.calledOnce).to.eql(true);
-      expect(setCall.calledOnce).to.eql(false);
-      expect(res.send.calledOnce).to.eql(true);
+      assert.equal(res.send.returnValues[0].code, 409);
+      assert.equal(res.send.returnValues[0].message, "A blocking key was found");
+      assert.equal(getCall.calledOnce, true);
+      assert.equal(setCall.calledOnce, false);
+      assert.equal(res.send.calledOnce, true);
     });
 
     it("if lookup does not exist it should set the value of the uniqueRequestKey", () => {
@@ -113,10 +114,10 @@ describe("Middleware", () => {
         callback(null, 'OK');
       });
 
-      middleware(req, res, () => {
-        expect(getCall.calledOnce).to.eql(true);
-        expect(setCall.calledOnce).to.eql(true);
-        expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
+      middleware(req, res, () => { 
+        assert.equal(getCall.calledOnce, true);
+        assert.equal(setCall.calledOnce, true);
+        assert.equal(req.uniqueRequestKey, "key:path:method:body.paramToFind:foundParam");
       });
     });
 
@@ -132,9 +133,9 @@ describe("Middleware", () => {
       });
 
       await middleware(req, res, () => { return "next" });
-      expect(getCall.calledOnce).to.eql(true);
-      expect(setCall.calledOnce).to.eql(false);
-      expect(req.uniqueRequestKey).to.be.undefined;
+      assert.equal(getCall.calledOnce, true);
+      assert.equal(setCall.calledOnce, false);
+      assert.equal(req.uniqueRequestKey, undefined);
     });
 
     it("if lookup does not exist, and the lookup format is invalid, and checkForKeyOnly is true it should call next", async () => {
@@ -151,9 +152,9 @@ describe("Middleware", () => {
 
       await middleware(req, res, () => { return "next" });
 
-      expect(getCall.calledOnce).to.eql(false);
-      expect(setCall.calledOnce).to.eql(false);
-      expect(req.uniqueRequestKey).to.be.undefined;
+      assert.equal(getCall.calledOnce, false);
+      assert.equal(setCall.calledOnce, false);
+      assert.equal(req.uniqueRequestKey, undefined);
     });
 
     it("if lookup exists, and the lookup keyName has been set, and checkForKeyOnly is true it should call next", async () => {
@@ -171,18 +172,18 @@ describe("Middleware", () => {
 
       await middleware(req, res, () => { return "next" });
 
-      expect(getCall.getCall(0).args[0]).to.eql(`key:path:method:${alternateKeyName}:foundParam`);
-      expect(getCall.calledOnce).to.eql(true);
-      expect(setCall.calledOnce).to.eql(false);
-      expect(req.uniqueRequestKey).to.be.undefined;
+      assert.equal(getCall.getCall(0).args[0], `key:path:method:${alternateKeyName}:foundParam`);
+      assert.equal(getCall.calledOnce, true);
+      assert.equal(setCall.calledOnce, false);
+      assert.equal(req.uniqueRequestKey, undefined);
     });
 
-    it("if the same key is sent before the first has expired, it should reject the second call", (done) => {
+    it("if the same key is sent before the first has expired, it should reject the second call", (t, done) => {
       res.status = (code) => {
         return {
           send(message) {
-            expect(code).to.eql(409);
-            expect(message).to.eql("test message");
+            assert.equal(code, 409);
+            assert.equal(message, "test message");
             done();
           }
         };
@@ -197,19 +198,19 @@ describe("Middleware", () => {
       });
 
       middleware(req, res, () => {
-        return middleware(req, res, () => {
-          expect(true).to.eql(false);
+        return middleware(req, res, () => { 
+          assert.equal(true, false);
           done();
         });
       });
-    });
-
-    it("if lookup exists, and db returns a value it should call onKeyFound, with a custom message", (done) => {
+    }); 
+    
+    it("if lookup exists, and db returns a value it should call onKeyFound, with a custom message", (t, done) => {
       res.status = (code) => {
         return {
           send(message) {
-            expect(code).to.eql(409);
-            expect(message).to.eql("test message");
+            assert.equal(code, 409);
+            assert.equal(message, "test message");
             done();
           }
         };
@@ -221,19 +222,19 @@ describe("Middleware", () => {
       const req = {body: {paramToFind: "foundParam"}};
 
       middleware(req, res, () => {
-        return middleware(req, res, () => {
-          expect(true).to.eql(false);
+        return middleware(req, res, () => { 
+          assert.equal(true, false);
           done();
         });
       });
     });
-
-    it("should add the key if setKey is called directly outside of the middleware", (done) => {
+    
+    it("should add the key if setKey is called directly outside of the middleware", (t, done) => {
       res.status = (code) => {
         return {
           send(message) {
-            expect(code).to.eql(409);
-            expect(message).to.eql("test message");
+            assert.equal(code, 409);
+            assert.equal(message, "test message");
             done();
           }
         };
@@ -247,17 +248,17 @@ describe("Middleware", () => {
             done("Key was unexpectedly not set");
           }
 
-          expect(result).to.exist.eq("OK");
+          assert.equal(result, "OK");
           done();
         });
     });
 
-    it("should return null if setKey is called directly outside of the middleware and the key already exists", (done) => {
+    it("should return null if setKey is called directly outside of the middleware and the key already exists", (t, done) => {
       res.status = (code) => {
         return {
           send(message) {
-            expect(code).to.eql(409);
-            expect(message).to.eql("test message");
+            assert.equal(code, 409);
+            assert.equal(message, "test message");
             done();
           }
         };
@@ -267,9 +268,9 @@ describe("Middleware", () => {
       const key = "foundParam";
 
       expiringKey.setKey(key, 10000, (err, result) => {
-        expect(result).to.exist.eq("OK");
+        assert.equal(result, "OK");
         expiringKey.setKey(key, 10000, (err, result) => {
-          expect(result).to.be.null;
+          assert.equal(result, null);
           done();
         });
       });
@@ -291,11 +292,11 @@ describe("Middleware", () => {
     });
 
     describe("when called as middleware", () => {
-      it("should work exactly like the middleware function", (done) => {
+      it("should work exactly like the middleware function", (t, done) => {
         const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
         const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
         const next = () => {
-          expect(true).to.be.true;
+          assert.equal(true, true);
           done();
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
@@ -308,8 +309,8 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(getCall.calledOnce).to.eql(true);
-        expect(setCall.calledOnce).to.eql(true);
+        assert.equal(getCall.calledOnce, true);
+        assert.equal(setCall.calledOnce, true);
       });
 
       it("should return next when no lookup is provided", () => {
@@ -319,7 +320,7 @@ describe("Middleware", () => {
         const opts = {};
 
         const result = expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(result).to.eql("next");
+        assert.equal(result, "next");
       });
 
       it("should return next when path is not found", () => {
@@ -329,7 +330,7 @@ describe("Middleware", () => {
         const opts = { lookup: "body.paramToFind" };
 
         const result = expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(result).to.eql("next");
+        assert.equal(result, "next");
       });
 
       it("should return next when method is not found", () => {
@@ -339,14 +340,14 @@ describe("Middleware", () => {
         const opts = { lookup: "body.paramToFind", path: "path" };
 
         const result = expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(result).to.eql("next");
+        assert.equal(result, "next");
       });
 
-      it("should handle database errors gracefully", (done) => {
+      it("should handle database errors gracefully", (t, done) => {
         const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
         const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
         const next = () => {
-          expect(true).to.be.true;
+          assert.equal(true, true);
           done();
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
@@ -356,16 +357,16 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(getCall.calledOnce).to.eql(true);
+        assert.equal(getCall.calledOnce, true);
       });
 
-      it("should call onKeyFound when key exists in database", (done) => {
+      it("should call onKeyFound when key exists in database", (t, done) => {
         const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
         const res = {
           status: (code) => ({
             send: (message) => {
-              expect(code).to.eql(409);
-              expect(message).to.eql("A blocking key was found");
+              assert.equal(code, 409);
+              assert.equal(message, "A blocking key was found");
               done();
             }
           })
@@ -378,14 +379,14 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(getCall.calledOnce).to.eql(true);
+        assert.equal(getCall.calledOnce, true);
       });
 
-      it("should set uniqueRequestKey when key is successfully set", (done) => {
+      it("should set uniqueRequestKey when key is successfully set", (t, done) => {
         const req = { path: "/test", method: "POST", body: { paramToFind: "foundParam" } };
         const res = { status: (code) => ({ send: (message) => ({ code, message }) }) };
         const next = () => {
-          expect(req.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
+          assert.equal(req.uniqueRequestKey, "key:path:method:body.paramToFind:foundParam");
           done();
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
@@ -398,17 +399,17 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        expect(getCall.calledOnce).to.eql(true);
-        expect(setCall.calledOnce).to.eql(true);
+        assert.equal(getCall.calledOnce, true);
+        assert.equal(setCall.calledOnce, true);
       });
     });
 
     describe("when called directly", () => {
-      it("should work with direct data object", (done) => {
-        const data = {
-          path: "/test",
-          method: "POST",
-          body: { paramToFind: "foundParam" }
+      it("should work with direct data object", (t, done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
@@ -420,19 +421,19 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
-          expect(err).to.be.null;
-          expect(result.uniqueRequestKey).to.eql("key:path:method:body.paramToFind:foundParam");
-          expect(getCall.calledOnce).to.eql(true);
-          expect(setCall.calledOnce).to.eql(true);
+          assert.equal(err, null);
+          assert.equal(result.uniqueRequestKey, "key:path:method:body.paramToFind:foundParam");
+          assert.equal(getCall.calledOnce, true);
+          assert.equal(setCall.calledOnce, true);
           done();
         });
       });
 
-      it("should handle key found scenario in direct call", (done) => {
-        const data = {
-          path: "/test",
-          method: "POST",
-          body: { paramToFind: "foundParam" }
+      it("should handle key found scenario in direct call", (t, done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
@@ -441,19 +442,19 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
-          expect(err).to.be.an('error');
-          expect(err.message).to.include("A blocking key was found");
-          expect(result).to.be.null;
-          expect(getCall.calledOnce).to.eql(true);
+          assert.ok(err instanceof Error);
+          assert.match(err.message, /A blocking key was found/);
+          assert.equal(result, null);
+          assert.equal(getCall.calledOnce, true);
           done();
         });
       });
 
-      it("should handle database errors in direct call", (done) => {
-        const data = {
-          path: "/test",
-          method: "POST",
-          body: { paramToFind: "foundParam" }
+      it("should handle database errors in direct call", (t, done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
@@ -462,18 +463,18 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
-          expect(err).to.be.null;
-          expect(result.key).to.be.undefined;
-          expect(getCall.calledOnce).to.eql(true);
+          assert.equal(err, null);
+          assert.equal(result.key, undefined);
+          assert.equal(getCall.calledOnce, true);
           done();
         });
       });
 
-      it("should handle checkForKeyOnly option in direct call", (done) => {
-        const data = {
-          path: "/test",
-          method: "POST",
-          body: { paramToFind: "foundParam" }
+      it("should handle checkForKeyOnly option in direct call", (t, done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
         };
         const opts = {
           lookup: "body.paramToFind",
@@ -490,19 +491,19 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
-          expect(err).to.be.null;
-          expect(result.key).to.be.undefined;
-          expect(getCall.calledOnce).to.eql(true);
-          expect(setCall.calledOnce).to.eql(false);
+          assert.equal(err, null);
+          assert.equal(result.key, undefined);
+          assert.equal(getCall.calledOnce, true);
+          assert.equal(setCall.calledOnce, false);
           done();
         });
       });
 
-      it("should handle custom onKeyFound handler in direct call", (done) => {
-        const data = {
-          path: "/test",
-          method: "POST",
-          body: { paramToFind: "foundParam" }
+      it("should handle custom onKeyFound handler in direct call", (t, done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
+          body: { paramToFind: "foundParam" } 
         };
         const customHandler = (req, res, next) => {
           res.status(418).send("Custom message");
@@ -519,18 +520,18 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
-          expect(err).to.be.an('error');
-          expect(err.message).to.include("Custom message");
-          expect(result).to.be.null;
-          expect(getCall.calledOnce).to.eql(true);
+          assert.ok(err instanceof Error);
+          assert.match(err.message, /Custom message/);
+          assert.equal(result, null);
+          assert.equal(getCall.calledOnce, true);
           done();
         });
       });
 
-      it("should handle complex lookup configurations in direct call", (done) => {
-        const data = {
-          path: "/test",
-          method: "POST",
+      it("should handle complex lookup configurations in direct call", (t, done) => {
+        const data = { 
+          path: "/test", 
+          method: "POST", 
           body: { paramToFind: "foundParam" },
           altBody: { altNewKey: "altValue" }
         };
@@ -548,10 +549,10 @@ describe("Middleware", () => {
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
-          expect(err).to.be.null;
-          expect(result.uniqueRequestKey).to.eql("key:path:method:altBody.altNewKey:foundParam");
-          expect(getCall.calledOnce).to.eql(true);
-          expect(setCall.calledOnce).to.eql(true);
+          assert.equal(err, null);
+          assert.equal(result.uniqueRequestKey, "key:path:method:altBody.altNewKey:foundParam");
+          assert.equal(getCall.calledOnce, true);
+          assert.equal(setCall.calledOnce, true);
           done();
         });
       });
@@ -563,10 +564,10 @@ describe("Middleware", () => {
       sinon.stub(redis, "del");
 
       expiringKey.clean(undefined);
-      expect(redis.del.notCalled).to.be.true;
+      assert.equal(redis.del.notCalled, true);
 
       expiringKey.clean(null);
-      expect(redis.del.notCalled).to.be.true;
+      assert.equal(redis.del.notCalled, true);
     });
   });
 });

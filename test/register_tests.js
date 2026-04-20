@@ -1,13 +1,10 @@
-"use strict";
-
+const {describe, it, before, beforeEach, afterEach} = require("node:test");
+const assert = require("node:assert/strict");
 const bodyParser = require("body-parser");
-const chai = require("chai");
-const {expect} = chai;
 const chance = require("chance").Chance();
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const sinon = require("sinon");
-const sinonChai = require("sinon-chai");
 const request = require("supertest");
 const {Authenticator, authPolicy, audiences} = require("btrz-auth-api-key");
 const {SimpleDao} = require("btrz-simple-dao");
@@ -15,8 +12,6 @@ const swaggerFactory = require("btrz-swagger-express");
 const {registerModules} = require("../index.js");
 const {attachHandlerToExpressServer} = require("../lib/register");
 const {ValidationError} = require("../index");
-
-chai.use(sinonChai);
 
 function capitalize(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -29,7 +24,7 @@ describe("register()", () => {
       models: {models: "hkasdjhasd"},
       swagger: {
         addModels(models) {
-          expect(models.models).to.be.eql({
+          assert.deepEqual(models.models, {
             "module1": {},
             "module2": {}
           });
@@ -107,7 +102,7 @@ describe("attachHandlerToExpressServer()", () => {
 
     // Check that the database name is the one that we configured for this test, to avoid making changes to
     // one of our public databases
-    expect(db.databaseName).to.eql("btrz_http_service_test");
+    assert.equal(db.databaseName, "btrz_http_service_test");
 
     await dropCollection(db, authenticatorConfig.collection.name);
     await Promise.all([
@@ -188,7 +183,7 @@ describe("attachHandlerToExpressServer()", () => {
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      expect(HandlerClass.register).to.have.been.calledOnceWithExactly(dependencies);
+      sinon.assert.calledOnceWithExactly(HandlerClass.register, dependencies);
     });
   });
 
@@ -206,7 +201,7 @@ describe("attachHandlerToExpressServer()", () => {
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      expect(constructorSpy).to.have.been.calledOnceWithExactly(dependencies);
+      sinon.assert.calledOnceWithExactly(constructorSpy, dependencies);
     });
 
     it("should allow the handler class' getSpec() method to be static", () => {
@@ -217,7 +212,7 @@ describe("attachHandlerToExpressServer()", () => {
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      expect(HandlerClass.getSpec).to.have.been.called;
+      sinon.assert.called(HandlerClass.getSpec);
     });
 
     it("should allow the handler class' getSpec() method to be an instance method", () => {
@@ -230,7 +225,7 @@ describe("attachHandlerToExpressServer()", () => {
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      expect(getSpecStub).to.have.been.called;
+      sinon.assert.called(getSpecStub);
     });
 
     it("should throw an error if the handler class has no getSpec() method", () => {
@@ -239,11 +234,10 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
-          "HandlerClass has no OpenAPI specification.  The handler class must contain a 'getSpec()' function, which returns the " +
-          "OpenAPI specification for the endpoint."
-        );
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        (error) => error.message === "HandlerClass has no OpenAPI specification.  The handler class must contain a 'getSpec()' function, which returns the OpenAPI specification for the endpoint."
+      );
     });
 
     it("should throw an error if the handler class has no configuration() method", () => {
@@ -252,11 +246,10 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
-          "HandlerClass has no configuration.  The handler class must contain a 'configuration()' function, which returns a " +
-          "configuration object."
-        );
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        (error) => error.message === "HandlerClass has no configuration.  The handler class must contain a 'configuration()' function, which returns a configuration object."
+      );
     });
 
     it("should throw an error if the handler configuration has no authorization policy", () => {
@@ -268,11 +261,10 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
-          "HandlerClass has no authorization policy.  The 'configuration()' function must return an object with an " +
-          "'authorization' property which describes how requests should be authorized."
-        );
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        (error) => error.message === "HandlerClass has no authorization policy.  The 'configuration()' function must return an object with an 'authorization' property which describes how requests should be authorized."
+      );
     });
 
     it("should throw an error if the 'authenticator' dependency (which comes from btrz-auth-api-key) has no 'getMiddlewareForAuthPolicy' function, indicating that the dependency is out of date", () => {
@@ -284,11 +276,11 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
+      assert.throws(() => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        new RegExp(
           "HandlerClass cannot be registered with the server because the installed version of btrz-auth-api-key is out of date.  " +
           "Upgrade btrz-auth-api-key to version 5.6.0 or greater."
-        );
+        ));
     });
 
     it("should throw an error if the handler configuration has an unrecognized authorization policy", () => {
@@ -300,8 +292,10 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw("Unrecognized authorization policy: SOME_UNKNOWN_AUTHORIZATION_POLICY");
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        /Unrecognized authorization policy: SOME_UNKNOWN_AUTHORIZATION_POLICY/
+      );
     });
 
     it("should throw an error if the handler spec has an unrecognized HTTP method", () => {
@@ -313,8 +307,10 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw('Handler spec has unrecognized HTTP method "INVALID_HTTP_METHOD"');
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        /Handler spec has unrecognized HTTP method "INVALID_HTTP_METHOD"/
+      );
     });
 
     it("should throw an error if the handler instance has no 'handler()' method", () => {
@@ -323,11 +319,10 @@ describe("attachHandlerToExpressServer()", () => {
         configuration = sinon.stub().returns(handlerConfiguration);
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
-          "HandlerClass has no 'handler(req, res)' method.  " +
-          "The class must contain a handler function which will receive incoming requests."
-        );
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        (error) => error.message === "HandlerClass has no 'handler(req, res)' method.  The class must contain a handler function which will receive incoming requests."
+      );
     });
 
     for (const httpMethod of ["GET", "POST", "DELETE", "PUT", "PATCH"]) {
@@ -344,7 +339,7 @@ describe("attachHandlerToExpressServer()", () => {
         sinon.spy(btrzSwaggerExpress, methodName);
         attachHandlerToExpressServer(HandlerClass, models, dependencies);
 
-        expect(btrzSwaggerExpress[methodName]).to.have.been.calledOnce;
+        sinon.assert.calledOnce(btrzSwaggerExpress[methodName]);
       });
     }
 
@@ -364,7 +359,7 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: 'ABC'})
         .expect(200);
 
-      expect(body).to.eql("Some endpoint response");
+      assert.equal(body, "Some endpoint response");
     });
 
     it("should authorize requests using the authorization policy specified in the handler configuration", async () => {
@@ -393,7 +388,7 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: 'ABC'})
         .parse(parseNonJsonResponse)
         .expect(401);
-      expect(body).to.eql("Unauthorized");
+      assert.equal(body, "Unauthorized");
     });
 
     it("should validate incoming requests against the OpenAPI spec defined for the handler", async () => {
@@ -433,7 +428,8 @@ describe("attachHandlerToExpressServer()", () => {
         .send({}) // Request body is an empty object.  The handler spec doesn't allow this
         .expect(400);
 
-      expect(mockLogger.error).to.have.been.calledOnceWithExactly(
+      sinon.assert.calledOnceWithExactly(
+        mockLogger.error,
         "Validation Failed ON http-response-handlers",
         {
           status: 400,
@@ -462,7 +458,8 @@ describe("attachHandlerToExpressServer()", () => {
         })
         .expect(200);
 
-      expect(mockLogger.debug).to.have.been.calledWith(
+      sinon.assert.calledWith(
+        mockLogger.debug,
         "The incoming request contains data that is not described in the handler\'s schema.  " +
         "The following properties were removed from the request body: someUnrecognizedProperty"
       );
@@ -509,7 +506,8 @@ describe("attachHandlerToExpressServer()", () => {
         })
         .expect(200);
 
-      expect(mockLogger.debug).to.have.been.calledWith(
+      sinon.assert.calledWith(
+        mockLogger.debug,
         "The incoming request contains 'null' values which have been removed.  " +
         "The following values were removed from the request body: someProperty, someArray[0], someArray[2]"
       );
@@ -549,10 +547,9 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
-          "HandlerClass has invalid 'validationSettings'.  " +
-          "The 'validationSettings' returned by the 'configuration()' function should be an object"
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        (error) => error.message === "HandlerClass has invalid 'validationSettings'.  The 'validationSettings' returned by the 'configuration()' function should be an object."
       );
     });
 
@@ -582,14 +579,14 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: "ABC"})
         .expect(200);
 
-      expect(authenticationMiddleware).to.have.been.calledOnce;
-      expect(handlerConfiguration.middleware[0]).to.have.been.calledOnce;
-      expect(handlerConfiguration.middleware[1]).to.have.been.calledOnce;
-      expect(handler).to.have.been.calledOnce;
+      sinon.assert.calledOnce(authenticationMiddleware);
+      sinon.assert.calledOnce(handlerConfiguration.middleware[0]);
+      sinon.assert.calledOnce(handlerConfiguration.middleware[1]);
+      sinon.assert.calledOnce(handler);
 
-      expect(authenticationMiddleware).to.have.been.calledImmediatelyBefore(handlerConfiguration.middleware[0]);
-      expect(handlerConfiguration.middleware[0]).to.have.been.calledImmediatelyBefore(handlerConfiguration.middleware[1]);
-      expect(handlerConfiguration.middleware[1]).to.have.been.calledImmediatelyBefore(handler);
+      assert.equal(authenticationMiddleware.calledBefore(handlerConfiguration.middleware[0]), true);
+      assert.equal(handlerConfiguration.middleware[0].calledBefore(handlerConfiguration.middleware[1]), true);
+      assert.equal(handlerConfiguration.middleware[1].calledBefore(handler), true);
     });
 
     it("should return the expected response if the custom middleware yields an error", async () => {
@@ -618,7 +615,7 @@ describe("attachHandlerToExpressServer()", () => {
           message: "Some error from middleware"
         });
 
-      expect(handler).not.to.have.been.called;
+      sinon.assert.notCalled(handler);
     });
 
     it("should throw an error if the 'middleware' in the handler configuration is not an array", () => {
@@ -630,10 +627,10 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
-          "HandlerClass has invalid 'middleware'.  The 'middleware' returned by the 'configuration()' function should be an array."
-        );
+      assert.throws(
+        () => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        (error) => error.message === "HandlerClass has invalid 'middleware'.  The 'middleware' returned by the 'configuration()' function should be an array."
+      );
     });
 
     it("should throw an error if the 'middleware' array in the handler configuration contains an entry that is not a function", () => {
@@ -645,11 +642,11 @@ describe("attachHandlerToExpressServer()", () => {
         handler = sinon.stub();
       }
 
-      expect(() => attachHandlerToExpressServer(HandlerClass, models, dependencies))
-        .to.throw(
+      assert.throws(() => attachHandlerToExpressServer(HandlerClass, models, dependencies),
+        new RegExp(
           "HandlerClass has invalid 'middleware'.  At least one middleware is not a function.  " +
           "Each item in the 'middleware' array should be an Express middleware function."
-        );
+        ));
     });
 
     it("should allow the handler to set the HTTP response code", async () => {
@@ -690,13 +687,11 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: 'ABC'})
         .expect(200);
 
-      expect(response.headers).to.contain({
-        "content-type": "application/pdf; charset=utf-8",
-        "content-length": "13" // Length of content provided to res.send(...)
-      });
-      expect(response.type).to.eql("application/pdf");
-      expect(response.body).to.be.an.instanceof(Buffer);
-      expect(response.body.toString()).to.eql("Some PDF data");
+      assert.equal(response.headers["content-type"], "application/pdf; charset=utf-8");
+      assert.equal(response.headers["content-length"], "13"); // Length of content provided to res.send(...)
+      assert.equal(response.type, "application/pdf");
+      assert.ok(response.body instanceof Buffer);
+      assert.equal(response.body.toString(), "Some PDF data");
     });
 
     it("should return the expected response when the handler rejects", async () => {
@@ -742,7 +737,7 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: 'ABC'})
         .expect(500);
 
-      expect(mockLogger.fatal).to.have.been.calledOnceWithExactly("ERROR ON http-response-handlers.error", handlerError);
+      sinon.assert.calledOnceWithExactly(mockLogger.fatal, "ERROR ON http-response-handlers.error", handlerError);
     });
 
     it(`should call the handler's "onHandlerError" method when the handler rejects, if this function is defined`, async () => {
@@ -770,7 +765,7 @@ describe("attachHandlerToExpressServer()", () => {
           code: "Some unexpected error",
           message: "Some unexpected error",
         });
-      expect(onHandlerError).to.have.been.calledOnceWithExactly(handlerError);
+      sinon.assert.calledOnceWithExactly(onHandlerError, handlerError);
     });
 
     it(`should allow the handler's "onHandlerError" function to be a static function`, async () => {
@@ -798,7 +793,7 @@ describe("attachHandlerToExpressServer()", () => {
           code: "Some unexpected error",
           message: "Some unexpected error",
         });
-      expect(onHandlerError).to.have.been.calledOnceWithExactly(handlerError);
+      sinon.assert.calledOnceWithExactly(onHandlerError, handlerError);
     });
 
     it(`should allow developers to map errors which occur in the handler by returning a new error from the "onHandlerError" method`, async () => {

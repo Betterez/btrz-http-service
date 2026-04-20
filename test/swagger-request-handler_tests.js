@@ -1,7 +1,8 @@
 "use strict";
+const {describe, it} = require("node:test");
+const assert = require("node:assert/strict");
 
 describe("SwaggerRequestHandler", () => {
-  const expect = require("chai").expect;
   const swaggerRequestHandler = require("../index.js").swaggerRequestHandler;
 
   class HandlerClass {
@@ -32,21 +33,23 @@ describe("SwaggerRequestHandler", () => {
     const handlerInstance = new HandlerClass();
     const swaggerHandler = swaggerRequestHandler(handlerInstance);
 
-    expect(swaggerHandler.spec.path).to.equal("specc");
+    assert.equal(swaggerHandler.spec.path, "specc");
   });
 
   it("should create an object with spec from the last argument (must be the handler)", () => {
     const handlerInstance = new HandlerClass();
     const swaggerHandler = swaggerRequestHandler(() => {}, () => {}, handlerInstance);
 
-    expect(swaggerHandler.spec.path).to.equal("specc");
+    assert.equal(swaggerHandler.spec.path, "specc");
   });
 
-  it("should create object with action that calls the given handler", (done) => {
+  it("should create object with action that calls the given handler", async () => {
     const handlerInstance = new HandlerClass();
     const swaggerHandler = swaggerRequestHandler(handlerInstance);
 
-    swaggerHandler.action({fn: done});
+    await new Promise((resolve) => {
+      swaggerHandler.action({fn: resolve});
+    });
   });
 
   it("should create object with action that calls the given handler and add ApiKeyAuth and JwtAuth security object", () => {
@@ -62,18 +65,18 @@ describe("SwaggerRequestHandler", () => {
     }
     const swaggerHandler = swaggerRequestHandler(authToken, handlerInstance);
 
-    expect(swaggerHandler.spec.method).to.equal("POST");
-    expect(swaggerHandler.spec.security[0].ApiKeyAuth.length).to.equal(0);
-    expect(swaggerHandler.spec.security[0].JwtAuth.length).to.equal(0);
+    assert.equal(swaggerHandler.spec.method, "POST");
+    assert.equal(swaggerHandler.spec.security[0].ApiKeyAuth.length, 0);
+    assert.equal(swaggerHandler.spec.security[0].JwtAuth.length, 0);
   });
 
   it("should create object with action that calls the given handler and add only the ApiKeyAuth security object", () => {
     const handlerInstance = new HandlerWithSecurityClass();
     const swaggerHandler = swaggerRequestHandler(handlerInstance);
 
-    expect(swaggerHandler.spec.method).to.equal("POST");
-    expect(swaggerHandler.spec.security[0].ApiKeyAuth.length).to.equal(0);
-    expect(swaggerHandler.spec.security[0].JwtAuth).to.equal(undefined);
+    assert.equal(swaggerHandler.spec.method, "POST");
+    assert.equal(swaggerHandler.spec.security[0].ApiKeyAuth.length, 0);
+    assert.equal(swaggerHandler.spec.security[0].JwtAuth, undefined);
   });
 
   it("should create object with action that calls the given handler and add ApiKeyAuth and BasicAuth security object", () => {
@@ -89,30 +92,33 @@ describe("SwaggerRequestHandler", () => {
     }
     const swaggerHandler = swaggerRequestHandler(authToken, handlerInstance);
 
-    expect(swaggerHandler.spec.method).to.equal("POST");
-    expect(swaggerHandler.spec.security[0].ApiKeyAuth.length).to.equal(0);
-    expect(swaggerHandler.spec.security[0].BasicAuth.length).to.equal(0);
+    assert.equal(swaggerHandler.spec.method, "POST");
+    assert.equal(swaggerHandler.spec.security[0].ApiKeyAuth.length, 0);
+    assert.equal(swaggerHandler.spec.security[0].BasicAuth.length, 0);
   });
 
-  it("should create object with action that executes middlewares before calling the given handler", (done) => {
+  it("should create object with action that executes middlewares before calling the given handler", async () => {
     const handlerInstance = new HandlerClass();
-    const request = {fn: done};
+    const request = {};
 
     function middleware(req, res, next) {
-      expect(req).to.deep.equal(request);
+      assert.deepEqual(req, request);
       next();
     }
 
     const swaggerHandler = swaggerRequestHandler(middleware, middleware, middleware, handlerInstance);
-    swaggerHandler.action(request);
+    await new Promise((resolve) => {
+      request.fn = resolve;
+      swaggerHandler.action(request);
+    });
   });
 
-  it("should respond with error if a middleware returns error", (done) => {
+  it("should respond with error if a middleware returns error", async () => {
     const handlerInstance = new HandlerClass();
     const request = {fn: () => {}};
 
     function middleware(req, res, next) {
-      expect(req).to.deep.equal(request);
+      assert.deepEqual(req, request);
       next();
     }
 
@@ -122,16 +128,20 @@ describe("SwaggerRequestHandler", () => {
 
     const response = {
       status(statusCode) {
-        expect(statusCode).to.equal(500);
+        assert.equal(statusCode, 500);
         return this;
       },
       json(body) {
-        expect(body).to.deep.equal({code: "an errr", message: "an errr"});
-        done();
+        assert.deepEqual(body, {code: "an errr", message: "an errr"});
+        resolvePromise();
       }
     };
+    let resolvePromise;
 
     const swaggerHandler = swaggerRequestHandler(middleware, errorMiddleware, middleware, handlerInstance);
-    swaggerHandler.action(request, response);
+    await new Promise((resolve) => {
+      resolvePromise = resolve;
+      swaggerHandler.action(request, response);
+    });
   });
 });

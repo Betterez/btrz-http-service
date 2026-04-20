@@ -1,7 +1,9 @@
+const {describe, it, beforeEach, afterEach} = require("node:test");
+const crypto = require("node:crypto");
+const assert = require("node:assert/strict");
+
 describe("userPermissionElevation", () => {
-  const crypto = require("node:crypto");
   const jwt = require("jsonwebtoken");
-  const expect = require("chai").expect;
   const sinon = require("sinon");
   const Chance = require("chance");
   const chance = new Chance();
@@ -46,7 +48,7 @@ describe("userPermissionElevation", () => {
   describe("#getElevationToken()", () => {
     it("should return the elevation token", () => {
       const result = getElevationToken(req.user, privateKey, action, delegator);
-      expect(result).to.equal(
+      assert.equal(result,
         jwt.sign({user: req.user, action, delegator: {_id: delegator._id.toString()}}, privateKey, {expiresIn: "30m" })
       );
     });
@@ -55,23 +57,25 @@ describe("userPermissionElevation", () => {
   describe("#base64UrlEncode()", () => {
     it("should encode the action in base64 url format", () => {
       const result = base64UrlEncode(action);
-      expect(result).to.equal(encodeURIComponent(Buffer.from(JSON.stringify(action)).toString('base64')));
+      assert.equal(result, encodeURIComponent(Buffer.from(JSON.stringify(action)).toString('base64')));
     });
   });
 
   describe("#redirectToElevatePermissions()", () => {
-    it("Given a delegate that returns true and the elevationToken is not present it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+    it("Given a delegate that returns true and the elevationToken is not present it should redirect to the redirect URL with the action encoded in the redirect URL", async () => {
       function delegate() {
         return true;
       }
-      res.redirect = (url) => {
-        expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
-        done();
-      };
-      redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      await new Promise((resolve) => {
+        res.redirect = (url) => {
+          assert.equal(url, `/elevate?action=${base64UrlEncode(action)}`);
+          resolve();
+        };
+        redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      });
     });
 
-    it("Given a delegate that returns true and the elevationToken is present but with invalid data it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+    it("Given a delegate that returns true and the elevationToken is present but with invalid data it should redirect to the redirect URL with the action encoded in the redirect URL", async () => {
       function delegate() {
         return true;
       }
@@ -84,14 +88,16 @@ describe("userPermissionElevation", () => {
         }
       }
       req.session.elevationToken = getElevationToken({_id: "1234"}, privateKey, {name: "move_ticket", data: {ticketIds: [123, 678]}});
-      res.redirect = (url) => {
-        expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
-        done();
-      };
-      redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      await new Promise((resolve) => {
+        res.redirect = (url) => {
+          assert.equal(url, `/elevate?action=${base64UrlEncode(action)}`);
+          resolve();
+        };
+        redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      });
     });
 
-    it("Given a delegate that returns true and the elevationToken is present but with invalid name it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+    it("Given a delegate that returns true and the elevationToken is present but with invalid name it should redirect to the redirect URL with the action encoded in the redirect URL", async () => {
       function delegate() {
         return true;
       }
@@ -104,14 +110,16 @@ describe("userPermissionElevation", () => {
         }
       }
       req.session.elevationToken = getElevationToken({_id: "1234"}, privateKey, {name: "move_ticket2", data: {ticketIds: [123, 456]}});
-      res.redirect = (url) => {
-        expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
-        done();
-      };
-      redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      await new Promise((resolve) => {
+        res.redirect = (url) => {
+          assert.equal(url, `/elevate?action=${base64UrlEncode(action)}`);
+          resolve();
+        };
+        redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      });
     });
 
-    it("Given a delegate that returns true and the elevationToken is present but with invalid signature it should redirect to the redirect URL with the action encoded in the redirect URL", (done) => {
+    it("Given a delegate that returns true and the elevationToken is present but with invalid signature it should redirect to the redirect URL with the action encoded in the redirect URL", async () => {
       function delegate() {
         return true;
       }
@@ -124,11 +132,13 @@ describe("userPermissionElevation", () => {
         }
       }
       req.session.elevationToken = jwt.sign({user: req.user, action}, "somthing-not-so-secret-again", {expiresIn: "30m" });
-      res.redirect = (url) => {
-        expect(url).to.equal(`/elevate?action=${base64UrlEncode(action)}`);
-        done();
-      };
-      redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      await new Promise((resolve) => {
+        res.redirect = (url) => {
+          assert.equal(url, `/elevate?action=${base64UrlEncode(action)}`);
+          resolve();
+        };
+        redirectToElevatePermissions(req, res, privateKey, action, delegate);
+      });
     });
 
     it("should return true if action doesn't have a redirect URL and the delegate returns true and no valid token is present", () => {
@@ -137,7 +147,7 @@ describe("userPermissionElevation", () => {
       }
       delete action.redirectUrl;
       const result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
-      expect(result).to.equal(true);
+      assert.equal(result, true);
     });
 
     it("Given a delegate that returns true and the elevationToken is present and valid it should not redirect to the redirect URL with the action encoded in the redirect URL", () => {
@@ -153,12 +163,8 @@ describe("userPermissionElevation", () => {
         }
       }
       req.session.elevationToken = getElevationToken(req.user, privateKey, action);
-      res.redirect = (url) => {
-        expect(url).to.equal(undefined);
-        done();
-      };
       const result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
-      expect(result).to.equal(false);
+      assert.equal(result, false);
     });
 
     it("should return false when the action data stored in the elevation token and the action data provided as an argument have the same data, but the order of array data is different", () => {
@@ -179,11 +185,11 @@ describe("userPermissionElevation", () => {
       }
       req.session.elevationToken = getElevationToken(req.user, privateKey, action);
       let result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
-      expect(result).to.equal(false);
+      assert.equal(result, false);
 
       action.data.tickets = [{_id: 2}, {_id: 1}];
       result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
-      expect(result).to.equal(false);
+      assert.equal(result, false);
     });
 
     it("should return false if the user does not need to elevate permissions", () => {
@@ -191,7 +197,7 @@ describe("userPermissionElevation", () => {
         return false;
       }
       const result = redirectToElevatePermissions(req, res, privateKey, action, delegate);
-      expect(result).to.equal(false);
+      assert.equal(result, false);
     });
   });
 
@@ -199,7 +205,7 @@ describe("userPermissionElevation", () => {
     it("should mark the elevation token as used", () => {
       req.session.elevationToken = getElevationToken(req.user, privateKey, action);
       markElevationTokenAsUsed(req, privateKey, action);
-      expect(req.session.elevationToken).to.equal(null);
+      assert.equal(req.session.elevationToken, null);
     });
   });
 
@@ -226,23 +232,23 @@ describe("userPermissionElevation", () => {
     });
 
     function expectMiddlewareCompletedWithNoErrors() {
-      expect(next.calledOnce).to.be.true;
-      expect(next.firstCall.args).to.eql([]);
-      expect(logger.error.calledOnce).to.be.false;
+      assert.equal(next.calledOnce, true);
+      assert.deepEqual(next.firstCall.args, []);
+      assert.equal(logger.error.calledOnce, false);
     }
 
     function expectMiddlewareCompletedWithError(errorMessage) {
-      expect(next.calledOnce).to.be.true;
-      expect(next.firstCall.args).to.eql([]);
-      expect(logger.error.calledOnce).to.be.true;
-      expect(logger.error.firstCall.args[0]).to.eql(errorMessage);
+      assert.equal(next.calledOnce, true);
+      assert.deepEqual(next.firstCall.args, []);
+      assert.equal(logger.error.calledOnce, true);
+      assert.deepEqual(logger.error.firstCall.args[0], errorMessage);
     }
 
     it("should set 'req.elevationToken' to null if the request does not have the 'x-elevation-token' header", () => {
       delete req.headers["x-elevation-token"];
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithNoErrors();
     });
 
@@ -250,7 +256,7 @@ describe("userPermissionElevation", () => {
       delete req.application;
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Received an 'x-elevation-token', but it cannot be verified because there is " +
         "no private key associated with the current request.  The token will be ignored.");
     });
@@ -259,11 +265,11 @@ describe("userPermissionElevation", () => {
       req.headers["x-elevation-token"] = "malformed token";
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Invalid token received in 'x-elevation-token' header");
       const jwtVerifyError = logger.error.firstCall.args[1];
-      expect(jwtVerifyError).to.be.an.instanceOf(Error);
-      expect(jwtVerifyError.message).to.equal("jwt malformed");
+      assert.ok(jwtVerifyError instanceof Error);
+      assert.equal(jwtVerifyError.message, "jwt malformed");
     });
 
     it("should log an error and continue if the elevation token is expired", () => {
@@ -271,18 +277,18 @@ describe("userPermissionElevation", () => {
       req.headers["x-elevation-token"] = jwt.sign({user: {_id: userId}, action, iat: jwtIssuedAt}, privateKey, {expiresIn: "1s" });
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Invalid token received in 'x-elevation-token' header");
       const jwtVerifyError = logger.error.firstCall.args[1];
-      expect(jwtVerifyError).to.be.an.instanceOf(Error);
-      expect(jwtVerifyError.message).to.equal("jwt expired");
+      assert.ok(jwtVerifyError instanceof Error);
+      assert.equal(jwtVerifyError.message, "jwt expired");
     });
 
     it("should log an error and continue if the ID of the user making the request could not be determined", () => {
       delete req.user;
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Received an 'x-elevation-token', but there is no user associated with the " +
         "current request.  The token will be ignored.");
     });
@@ -291,7 +297,7 @@ describe("userPermissionElevation", () => {
       req.headers["x-elevation-token"] = jwt.sign({action}, privateKey, {expiresIn: "30m" });
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Received a malformed 'x-elevation-token'.  The token does not contain a user ID.   The token will be ignored.");
     });
 
@@ -299,16 +305,14 @@ describe("userPermissionElevation", () => {
       req.user._id = SimpleDao.objectId().toString();
 
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.be.null;
+      assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Received an 'x-elevation-token' which belongs to another user.  The token will be ignored.");
     });
 
     it("should set 'req.elevationToken' to the decoded value of the elevation token provided in the 'x-elevation-token' header", () => {
       elevationTokenMiddleware(req, res, next);
-      expect(req.elevationToken).to.deep.contain({
-        user: {_id: userId},
-        action
-      });
+      assert.deepEqual(req.elevationToken.user, {_id: userId});
+      assert.deepEqual(req.elevationToken.action, action);
       expectMiddlewareCompletedWithNoErrors();
     });
   });

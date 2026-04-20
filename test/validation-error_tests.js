@@ -1,41 +1,42 @@
 "use strict";
+const {describe, it} = require("node:test");
+const assert = require("node:assert/strict");
 
 describe("ValidationError", () => {
-  const expect = require("chai").expect;
   const ValidationError = require("../index.js").ValidationError;
 
   describe("constructor", () => {
     it("should be a sub class of Error", () => {
-      expect((new ValidationError())).to.be.an.instanceOf(Error);
+      assert.ok((new ValidationError()) instanceof Error);
     });
 
     it("should capture stack trace", () => {
-      expect((new ValidationError()).stack).to.include("error_tests");
+      assert.match((new ValidationError()).stack, /error_tests/);
     });
 
     it("should set proper error name", () => {
-      expect((new ValidationError()).name).to.equal("ValidationError");
+      assert.equal((new ValidationError()).name, "ValidationError");
     });
 
     it("should set given error code", () => {
-      expect((new ValidationError("WRONG")).code).to.equal("WRONG");
+      assert.equal((new ValidationError("WRONG")).code, "WRONG");
     });
 
     it("should set given error message", () => {
-      expect((new ValidationError("WRONG", "something's wrong")).message).to.equal("something's wrong");
+      assert.equal((new ValidationError("WRONG", "something's wrong")).message, "something's wrong");
     });
 
     it("should set http 400 status code", () => {
-      expect((new ValidationError("WRONG", "something's wrong")).status).to.equal(400);
+      assert.equal((new ValidationError("WRONG", "something's wrong")).status, 400);
     });
 
     it("should set given http status code", () => {
-      expect((new ValidationError("NOTFOUND", "not here", 404)).status).to.equal(404);
+      assert.equal((new ValidationError("NOTFOUND", "not here", 404)).status, 404);
     });
 
     it("should have empty string defaults for code and message", () => {
-      expect((new ValidationError()).code).to.equal("");
-      expect((new ValidationError()).message).to.equal("");
+      assert.equal((new ValidationError()).code, "");
+      assert.equal((new ValidationError()).message, "");
     });
   });
 });

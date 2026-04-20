@@ -1,13 +1,14 @@
 "use strict";
+const {describe, it} = require("node:test");
+const assert = require("node:assert/strict");
 
 describe("Paginated Response Builder", () => {
   const PaginatedResponseBuilder = require("../index.js").PaginatedResponseBuilder;
-  const expect = require("chai").expect;
 
   describe("#getNextAndPrevUrls()", () => {
     it("should return defaults", () => {
       const result = PaginatedResponseBuilder.getNextAndPrevUrls();
-      expect(result).to.deep.equal({next: "", previous: ""});
+      assert.deepEqual(result, {next: "", previous: ""});
     });
 
     it("should build next url from first page", () => {
@@ -20,7 +21,7 @@ describe("Paginated Response Builder", () => {
       const totalRecords = 10;
       const url = "http://localhost:3010/inventory/test";
       const result = PaginatedResponseBuilder.getNextAndPrevUrls(url, query, totalRecords, pageSize);
-      expect(result).to.deep.equal({
+      assert.deepEqual(result, {
         next: "http://localhost:3010/inventory/test?page=2&filter1=one&filter2=two%20three",
         previous: ""
       });
@@ -36,7 +37,7 @@ describe("Paginated Response Builder", () => {
       const totalRecords = 10;
       const url = "http://localhost:3010/inventory/test";
       const result = PaginatedResponseBuilder.getNextAndPrevUrls(url, query, totalRecords, pageSize);
-      expect(result).to.deep.equal({
+      assert.deepEqual(result, {
         next: "",
         previous: "http://localhost:3010/inventory/test?page=1&filter1=one&filter2=two%20three",
       });
@@ -52,7 +53,7 @@ describe("Paginated Response Builder", () => {
       const totalRecords = 15;
       const url = "http://localhost:3010/inventory/test";
       const result = PaginatedResponseBuilder.getNextAndPrevUrls(url, query, totalRecords, pageSize);
-      expect(result).to.deep.equal({
+      assert.deepEqual(result, {
         next: "http://localhost:3010/inventory/test?page=3&filter1=one&filter2=two%20three",
         previous: "http://localhost:3010/inventory/test?page=1&filter1=one&filter2=two%20three",
       });
@@ -67,7 +68,7 @@ describe("Paginated Response Builder", () => {
       const query = {};
       const count = 3;
       const result = PaginatedResponseBuilder.buildResponse(results, query, count);
-      expect(result).to.deep.equal({
+      assert.deepEqual(result, {
         data: [1, 2, 3],
         count: 3,
         next: "",
@@ -86,7 +87,7 @@ describe("Paginated Response Builder", () => {
       const url = "http://localhost:3010/inventory/test";
       const results = {data: [1, 2, 3]};
       const result = PaginatedResponseBuilder.buildResponse(results, query, totalRecords, pageSize, url);
-      expect(result).to.deep.equal({
+      assert.deepEqual(result, {
         data: [1, 2, 3],
         count: 15,
         next: "http://localhost:3010/inventory/test?page=3&filter1=one&filter2=two%20three",
