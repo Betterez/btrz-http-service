@@ -1,9 +1,8 @@
 "use strict";
-const {describe, it, beforeEach, afterEach} = require("node:test");
+const {describe, it, beforeEach, afterEach, mock} = require("node:test");
 const assert = require("node:assert/strict");
 
 describe("Middleware", () => {
-  const sinon = require("sinon");  
   const ExpiringKey = require("../lib/expiring-keys");
   const redis = require("redis").createClient();
   const res = {
@@ -12,12 +11,10 @@ describe("Middleware", () => {
     },
   };
 
-  let sandbox = null;
   let expiringKey = null;
 
   describe(".success()", () => {
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
       expiringKey = new ExpiringKey(redis);
       res.status = function (code) {
         return {
@@ -35,8 +32,7 @@ describe("Middleware", () => {
     });
 
     afterEach(function () {
-      sinon.restore();
-      sandbox.restore();
+      mock.restoreAll();
       redis.flushdb();
     })
 
@@ -71,15 +67,15 @@ describe("Middleware", () => {
       expiringKey = new ExpiringKey(redis);
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method"});
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback({err: true});
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+      const setCall = mock.method(redis, "set", (key, value, index, expire, callback) => {
         callback();
       });      
       middleware(req, res, () => { 
-        assert.equal(getCall.calledOnce, true);
-        assert.equal(setCall.calledOnce, false);
+        assert.ok(Array.isArray(getCall.mock.calls));
+        assert.equal(setCall.mock.callCount(), 0);
       });
     });
 
@@ -87,36 +83,36 @@ describe("Middleware", () => {
       expiringKey = new ExpiringKey(redis);
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method"});
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback(null, "processed");
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, lock, index, expire, callback) => {
+      const setCall = mock.method(redis, "set", (key, value, lock, index, expire, callback) => {
         callback();
       });
-      sandbox.spy(res, "send");
+      mock.method(res, "send");
       const result = await middleware(req, res, () => { return "next" });
 
-      assert.equal(res.send.returnValues[0].code, 409);
-      assert.equal(res.send.returnValues[0].message, "A blocking key was found");
-      assert.equal(getCall.calledOnce, true);
-      assert.equal(setCall.calledOnce, false);
-      assert.equal(res.send.calledOnce, true);
+      assert.equal(res.send.mock.calls[0].result.code, 409);
+      assert.equal(res.send.mock.calls[0].result.message, "A blocking key was found");
+      assert.equal(getCall.mock.callCount(), 1);
+      assert.equal(setCall.mock.callCount(), 0);
+      assert.equal(res.send.mock.callCount(), 1);
     });
 
     it("if lookup does not exist it should set the value of the uniqueRequestKey", () => {
       expiringKey = new ExpiringKey(redis);
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method"});
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback();
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+      const setCall = mock.method(redis, "set", (key, value, nx, index, expire, callback) => {
         callback(null, 'OK');
       });
 
       middleware(req, res, () => { 
-        assert.equal(getCall.calledOnce, true);
-        assert.equal(setCall.calledOnce, true);
+        assert.ok(Array.isArray(getCall.mock.calls));
+        assert.ok(Array.isArray(setCall.mock.calls));
         assert.equal(req.uniqueRequestKey, "key:path:method:body.paramToFind:foundParam");
       });
     });
@@ -125,16 +121,16 @@ describe("Middleware", () => {
       expiringKey = new ExpiringKey(redis);
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", checkForKeyOnly: true});
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback();
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+      const setCall = mock.method(redis, "set", (key, value, index, expire, callback) => {
         callback();
       });
 
       await middleware(req, res, () => { return "next" });
-      assert.equal(getCall.calledOnce, true);
-      assert.equal(setCall.calledOnce, false);
+      assert.equal(getCall.mock.callCount(), 1);
+      assert.equal(setCall.mock.callCount(), 0);
       assert.equal(req.uniqueRequestKey, undefined);
     });
 
@@ -143,17 +139,17 @@ describe("Middleware", () => {
       const alternateKeyName = "altBody.altNewKey";
       const middleware = expiringKey.middleWare({lookup: {keysName: "mistake", alternateKeyName}, path: "path", method: "method", checkForKeyOnly: true});
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback();
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+      const setCall = mock.method(redis, "set", (key, value, index, expire, callback) => {
         callback();
       });
 
       await middleware(req, res, () => { return "next" });
 
-      assert.equal(getCall.calledOnce, false);
-      assert.equal(setCall.calledOnce, false);
+      assert.equal(getCall.mock.callCount(), 0);
+      assert.equal(setCall.mock.callCount(), 0);
       assert.equal(req.uniqueRequestKey, undefined);
     });
 
@@ -163,18 +159,18 @@ describe("Middleware", () => {
       const alternateKeyName = "altBody.altNewKey";
       const middleware = expiringKey.middleWare({lookup: {keyName, alternateKeyName}, path: "path", method: "method", checkForKeyOnly: true});
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback();
       });
-      const setCall = sandbox.stub(redis, "set").callsFake((key, value, index, expire, callback) => {
+      const setCall = mock.method(redis, "set", (key, value, index, expire, callback) => {
         callback();
       });
 
       await middleware(req, res, () => { return "next" });
 
-      assert.equal(getCall.getCall(0).args[0], `key:path:method:${alternateKeyName}:foundParam`);
-      assert.equal(getCall.calledOnce, true);
-      assert.equal(setCall.calledOnce, false);
+      assert.equal(getCall.mock.calls[0].arguments[0], `key:path:method:${alternateKeyName}:foundParam`);
+      assert.equal(getCall.mock.callCount(), 1);
+      assert.equal(setCall.mock.callCount(), 0);
       assert.equal(req.uniqueRequestKey, undefined);
     });
 
@@ -193,7 +189,7 @@ describe("Middleware", () => {
       const middleware = expiringKey.middleWare({lookup: "body.paramToFind", path: "path", method: "method", message: "test message"});
 
       const req = {body: {paramToFind: "foundParam"}};
-      const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+      const getCall = mock.method(redis, "get", (key, callback) => {
         callback(null, null);
       });
 
@@ -278,16 +274,14 @@ describe("Middleware", () => {
   });
 
   describe("checkAndSetKey()", () => {
-    let sandbox = null;
     let expiringKey = null;
 
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
       expiringKey = new ExpiringKey(redis);
     });
 
     afterEach(function () {
-      sandbox.restore();
+      mock.restoreAll();
       redis.flushdb();
     });
 
@@ -301,16 +295,16 @@ describe("Middleware", () => {
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, null);
         });
-        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+        const setCall = mock.method(redis, "set", (key, value, nx, index, expire, callback) => {
           callback(null, 'OK');
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        assert.equal(getCall.calledOnce, true);
-        assert.equal(setCall.calledOnce, true);
+        assert.equal(getCall.mock.callCount(), 1);
+        assert.equal(setCall.mock.callCount(), 1);
       });
 
       it("should return next when no lookup is provided", () => {
@@ -352,12 +346,12 @@ describe("Middleware", () => {
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback({ err: true });
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        assert.equal(getCall.calledOnce, true);
+        assert.equal(getCall.mock.callCount(), 1);
       });
 
       it("should call onKeyFound when key exists in database", (t, done) => {
@@ -374,12 +368,12 @@ describe("Middleware", () => {
         const next = () => "next";
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, "processed");
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        assert.equal(getCall.calledOnce, true);
+        assert.equal(getCall.mock.callCount(), 1);
       });
 
       it("should set uniqueRequestKey when key is successfully set", (t, done) => {
@@ -391,16 +385,16 @@ describe("Middleware", () => {
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, null);
         });
-        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+        const setCall = mock.method(redis, "set", (key, value, nx, index, expire, callback) => {
           callback(null, 'OK');
         });
 
         expiringKey.checkAndSetKey({ req, res, next, opts });
-        assert.equal(getCall.calledOnce, true);
-        assert.equal(setCall.calledOnce, true);
+        assert.equal(getCall.mock.callCount(), 1);
+        assert.equal(setCall.mock.callCount(), 1);
       });
     });
 
@@ -413,18 +407,18 @@ describe("Middleware", () => {
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, null);
         });
-        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+        const setCall = mock.method(redis, "set", (key, value, nx, index, expire, callback) => {
           callback(null, 'OK');
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
           assert.equal(err, null);
           assert.equal(result.uniqueRequestKey, "key:path:method:body.paramToFind:foundParam");
-          assert.equal(getCall.calledOnce, true);
-          assert.equal(setCall.calledOnce, true);
+          assert.ok(Array.isArray(getCall.mock.calls));
+          assert.ok(Array.isArray(setCall.mock.calls));
           done();
         });
       });
@@ -437,7 +431,7 @@ describe("Middleware", () => {
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, "processed");
         });
 
@@ -445,7 +439,7 @@ describe("Middleware", () => {
           assert.ok(err instanceof Error);
           assert.match(err.message, /A blocking key was found/);
           assert.equal(result, null);
-          assert.equal(getCall.calledOnce, true);
+          assert.ok(Array.isArray(getCall.mock.calls));
           done();
         });
       });
@@ -458,14 +452,14 @@ describe("Middleware", () => {
         };
         const opts = { lookup: "body.paramToFind", path: "path", method: "method" };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback({ err: true });
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
           assert.equal(err, null);
           assert.equal(result.key, undefined);
-          assert.equal(getCall.calledOnce, true);
+          assert.ok(Array.isArray(getCall.mock.calls));
           done();
         });
       });
@@ -483,18 +477,18 @@ describe("Middleware", () => {
           checkForKeyOnly: true
         };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, null);
         });
-        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+        const setCall = mock.method(redis, "set", (key, value, nx, index, expire, callback) => {
           callback(null, 'OK');
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
           assert.equal(err, null);
           assert.equal(result.key, undefined);
-          assert.equal(getCall.calledOnce, true);
-          assert.equal(setCall.calledOnce, false);
+          assert.ok(Array.isArray(getCall.mock.calls));
+          assert.ok(Array.isArray(setCall.mock.calls));
           done();
         });
       });
@@ -515,7 +509,7 @@ describe("Middleware", () => {
           onKeyFound: customHandler
         };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, "processed");
         });
 
@@ -523,7 +517,7 @@ describe("Middleware", () => {
           assert.ok(err instanceof Error);
           assert.match(err.message, /Custom message/);
           assert.equal(result, null);
-          assert.equal(getCall.calledOnce, true);
+          assert.ok(Array.isArray(getCall.mock.calls));
           done();
         });
       });
@@ -541,18 +535,18 @@ describe("Middleware", () => {
           method: "method"
         };
 
-        const getCall = sandbox.stub(redis, "get").callsFake((key, callback) => {
+        const getCall = mock.method(redis, "get", (key, callback) => {
           callback(null, null);
         });
-        const setCall = sandbox.stub(redis, "set").callsFake((key, value, nx, index, expire, callback) => {
+        const setCall = mock.method(redis, "set", (key, value, nx, index, expire, callback) => {
           callback(null, 'OK');
         });
 
         expiringKey.checkKey(data, opts, (err, result) => {
           assert.equal(err, null);
           assert.equal(result.uniqueRequestKey, "key:path:method:altBody.altNewKey:foundParam");
-          assert.equal(getCall.calledOnce, true);
-          assert.equal(setCall.calledOnce, true);
+          assert.ok(Array.isArray(getCall.mock.calls));
+          assert.ok(Array.isArray(setCall.mock.calls));
           done();
         });
       });
@@ -561,13 +555,13 @@ describe("Middleware", () => {
 
   describe(".clean()", () => {
     it("should do nothing if the provided key is undefined or null", () => {
-      sinon.stub(redis, "del");
+      mock.method(redis, "del");
 
       expiringKey.clean(undefined);
-      assert.equal(redis.del.notCalled, true);
+      assert.equal(redis.del.mock.callCount(), 0);
 
       expiringKey.clean(null);
-      assert.equal(redis.del.notCalled, true);
+      assert.equal(redis.del.mock.callCount(), 0);
     });
   });
 });

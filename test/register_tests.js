@@ -1,10 +1,9 @@
-const {describe, it, before, beforeEach, afterEach} = require("node:test");
+const {describe, it, before, beforeEach, afterEach, mock} = require("node:test");
 const assert = require("node:assert/strict");
 const bodyParser = require("body-parser");
 const chance = require("chance").Chance();
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const sinon = require("sinon");
 const request = require("supertest");
 const {Authenticator, authPolicy, audiences} = require("btrz-auth-api-key");
 const {SimpleDao} = require("btrz-simple-dao");
@@ -119,10 +118,10 @@ describe("attachHandlerToExpressServer()", () => {
   beforeEach(() => {
     expressApp = express();
     mockLogger = {
-      debug: sinon.stub(),
-      info: sinon.stub(),
-      error: sinon.stub(),
-      fatal: sinon.stub()
+      debug: mock.fn(),
+      info: mock.fn(),
+      error: mock.fn(),
+      fatal: mock.fn()
     };
     models = {};
     handlerSpec = {
@@ -171,67 +170,69 @@ describe("attachHandlerToExpressServer()", () => {
   });
 
   afterEach(() => {
-    sinon.restore();
+    mock.restoreAll();
   });
 
   describe("when registering a handler class which has a register() function", () => {
     it("should call the handler's register() function with the correct arguments", () => {
       class HandlerClass {
-        static register = sinon.stub();
-        getSpec = sinon.stub();
-        handler = sinon.stub();
+        static register = mock.fn();
+        getSpec = mock.fn();
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      sinon.assert.calledOnceWithExactly(HandlerClass.register, dependencies);
+      assert.strictEqual(HandlerClass.register.mock.callCount(), 1);
+      assert.deepStrictEqual(HandlerClass.register.mock.calls[0].arguments, [dependencies]);
     });
   });
 
   describe("when registering a handler class which does not have a register() function", () => {
     it("should call the handler's constructor with the correct arguments", () => {
-      const constructorSpy = sinon.spy();
+      const constructorSpy = mock.fn();
 
       class HandlerClass {
         constructor(...args) {
           constructorSpy(...args);
         }
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      sinon.assert.calledOnceWithExactly(constructorSpy, dependencies);
+      assert.strictEqual(constructorSpy.mock.callCount(), 1);
+      assert.deepStrictEqual(constructorSpy.mock.calls[0].arguments, [dependencies]);
     });
 
     it("should allow the handler class' getSpec() method to be static", () => {
       class HandlerClass {
-        static getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        static getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      sinon.assert.called(HandlerClass.getSpec);
+      assert.strictEqual(HandlerClass.getSpec.mock.callCount() > 0, true);
     });
 
     it("should allow the handler class' getSpec() method to be an instance method", () => {
-      const getSpecStub = sinon.stub().returns(handlerSpec);
+      const getSpecStub = mock.fn(() => handlerSpec);
 
       class HandlerClass {
         getSpec = getSpecStub;
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
-      sinon.assert.called(getSpecStub);
+      assert.strictEqual(getSpecStub.mock.callCount() > 0, true);
     });
 
     it("should throw an error if the handler class has no getSpec() method", () => {
       class HandlerClass {
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -242,8 +243,8 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should throw an error if the handler class has no configuration() method", () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -256,9 +257,9 @@ describe("attachHandlerToExpressServer()", () => {
       delete handlerConfiguration.authorization;
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -271,9 +272,9 @@ describe("attachHandlerToExpressServer()", () => {
       delete authenticator.getMiddlewareForAuthPolicy;
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(() => attachHandlerToExpressServer(HandlerClass, models, dependencies),
@@ -287,9 +288,9 @@ describe("attachHandlerToExpressServer()", () => {
       handlerConfiguration.authorization = "SOME_UNKNOWN_AUTHORIZATION_POLICY";
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -302,9 +303,9 @@ describe("attachHandlerToExpressServer()", () => {
       handlerSpec.method = "INVALID_HTTP_METHOD";
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -315,8 +316,8 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should throw an error if the handler instance has no 'handler()' method", () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
       }
 
       assert.throws(
@@ -330,24 +331,24 @@ describe("attachHandlerToExpressServer()", () => {
         handlerSpec.method = httpMethod;
 
         class HandlerClass {
-          getSpec = sinon.stub().returns(handlerSpec);
-          configuration = sinon.stub().returns(handlerConfiguration);
-          handler = sinon.stub();
+          getSpec = mock.fn(() => handlerSpec);
+          configuration = mock.fn(() => handlerConfiguration);
+          handler = mock.fn();
         }
 
         const methodName = `add${capitalize(httpMethod.toLowerCase())}`;
-        sinon.spy(btrzSwaggerExpress, methodName);
+        mock.method(btrzSwaggerExpress, methodName);
         attachHandlerToExpressServer(HandlerClass, models, dependencies);
 
-        sinon.assert.calledOnce(btrzSwaggerExpress[methodName]);
+        assert.strictEqual(btrzSwaggerExpress[methodName].mock.callCount(), 1);
       });
     }
 
     it("should attach the handler to the Express server, allowing it to respond to requests", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub().returns("Some endpoint response");
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn(() => "Some endpoint response");
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -366,9 +367,9 @@ describe("attachHandlerToExpressServer()", () => {
       handlerConfiguration.authorization = authPolicy.USER_MUST_BE_LOGGED_IN_TO_BACKOFFICE_APP;
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -393,9 +394,9 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should validate incoming requests against the OpenAPI spec defined for the handler", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -414,9 +415,9 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should log when the incoming request failed validation against the OpenAPI spec", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -428,22 +429,22 @@ describe("attachHandlerToExpressServer()", () => {
         .send({}) // Request body is an empty object.  The handler spec doesn't allow this
         .expect(400);
 
-      sinon.assert.calledOnceWithExactly(
-        mockLogger.error,
+      assert.strictEqual(mockLogger.error.mock.callCount(), 1);
+      assert.deepStrictEqual(mockLogger.error.mock.calls[0].arguments, [
         "Validation Failed ON http-response-handlers",
         {
           status: 400,
-          code: 'WRONG_DATA',
-          message: 'Request body is invalid: someProperty is required but is missing'
+          code: "WRONG_DATA",
+          message: "Request body is invalid: someProperty is required but is missing"
         }
-      );
+      ]);
     });
 
     it("should log when the incoming request was modified, and properties were deleted from the request", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -458,10 +459,12 @@ describe("attachHandlerToExpressServer()", () => {
         })
         .expect(200);
 
-      sinon.assert.calledWith(
-        mockLogger.debug,
-        "The incoming request contains data that is not described in the handler\'s schema.  " +
-        "The following properties were removed from the request body: someUnrecognizedProperty"
+      assert.strictEqual(mockLogger.debug.mock.callCount() > 0, true);
+      assert.strictEqual(
+        mockLogger.debug.mock.calls.some((call) => call.arguments[0] ===
+          "The incoming request contains data that is not described in the handler's schema.  " +
+          "The following properties were removed from the request body: someUnrecognizedProperty"),
+        true
       );
     });
 
@@ -489,9 +492,9 @@ describe("attachHandlerToExpressServer()", () => {
       };
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -506,10 +509,12 @@ describe("attachHandlerToExpressServer()", () => {
         })
         .expect(200);
 
-      sinon.assert.calledWith(
-        mockLogger.debug,
-        "The incoming request contains 'null' values which have been removed.  " +
-        "The following values were removed from the request body: someProperty, someArray[0], someArray[2]"
+      assert.strictEqual(mockLogger.debug.mock.callCount() > 0, true);
+      assert.strictEqual(
+        mockLogger.debug.mock.calls.some((call) => call.arguments[0] ===
+          "The incoming request contains 'null' values which have been removed.  " +
+          "The following values were removed from the request body: someProperty, someArray[0], someArray[2]"),
+        true
       );
     });
 
@@ -519,9 +524,9 @@ describe("attachHandlerToExpressServer()", () => {
       };
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -542,9 +547,9 @@ describe("attachHandlerToExpressServer()", () => {
       handlerConfiguration.validationSettings = "some string";
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -554,19 +559,31 @@ describe("attachHandlerToExpressServer()", () => {
     });
 
     it("should allow custom middleware to be provided in the handler configuration, and execute that middleware after the authorization middleware but before the handler function", async () => {
-      const authenticationMiddleware = sinon.stub().yields();
-      sinon.stub(authenticator, "getMiddlewareForAuthPolicy").returns(authenticationMiddleware)
+      const callOrder = [];
+      const authenticationMiddleware = mock.fn((req, res, next) => {
+        callOrder.push("auth");
+        next();
+      });
+      mock.method(authenticator, "getMiddlewareForAuthPolicy", () => authenticationMiddleware);
 
       handlerConfiguration.middleware = [
-        sinon.stub().yields(),
-        sinon.stub().yields()
+        mock.fn((req, res, next) => {
+          callOrder.push("mw1");
+          next();
+        }),
+        mock.fn((req, res, next) => {
+          callOrder.push("mw2");
+          next();
+        })
       ];
 
-      const handler = sinon.stub();
+      const handler = mock.fn(() => {
+        callOrder.push("handler");
+      });
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = handler;
       }
 
@@ -579,27 +596,24 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: "ABC"})
         .expect(200);
 
-      sinon.assert.calledOnce(authenticationMiddleware);
-      sinon.assert.calledOnce(handlerConfiguration.middleware[0]);
-      sinon.assert.calledOnce(handlerConfiguration.middleware[1]);
-      sinon.assert.calledOnce(handler);
-
-      assert.equal(authenticationMiddleware.calledBefore(handlerConfiguration.middleware[0]), true);
-      assert.equal(handlerConfiguration.middleware[0].calledBefore(handlerConfiguration.middleware[1]), true);
-      assert.equal(handlerConfiguration.middleware[1].calledBefore(handler), true);
+      assert.strictEqual(authenticationMiddleware.mock.callCount(), 1);
+      assert.strictEqual(handlerConfiguration.middleware[0].mock.callCount(), 1);
+      assert.strictEqual(handlerConfiguration.middleware[1].mock.callCount(), 1);
+      assert.strictEqual(handler.mock.callCount(), 1);
+      assert.deepStrictEqual(callOrder, ["auth", "mw1", "mw2", "handler"]);
     });
 
     it("should return the expected response if the custom middleware yields an error", async () => {
       handlerConfiguration.middleware = [
-        sinon.stub().yields(new Error("Some error from middleware"))
+        mock.fn((req, res, next) => next(new Error("Some error from middleware")))
       ];
 
-      const handler = sinon.stub();
+      const handler = mock.fn();
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       attachHandlerToExpressServer(HandlerClass, models, dependencies);
@@ -615,16 +629,16 @@ describe("attachHandlerToExpressServer()", () => {
           message: "Some error from middleware"
         });
 
-      sinon.assert.notCalled(handler);
+      assert.strictEqual(handler.mock.callCount(), 0);
     });
 
     it("should throw an error if the 'middleware' in the handler configuration is not an array", () => {
-      handlerConfiguration.middleware = sinon.stub();
+      handlerConfiguration.middleware = mock.fn();
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(
@@ -634,12 +648,12 @@ describe("attachHandlerToExpressServer()", () => {
     });
 
     it("should throw an error if the 'middleware' array in the handler configuration contains an entry that is not a function", () => {
-      handlerConfiguration.middleware = [sinon.stub(), "A"];
+      handlerConfiguration.middleware = [mock.fn(), "A"];
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub();
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn();
       }
 
       assert.throws(() => attachHandlerToExpressServer(HandlerClass, models, dependencies),
@@ -651,8 +665,8 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should allow the handler to set the HTTP response code", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = (req, res) => {
           res.status(304);
         };
@@ -670,8 +684,8 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should allow the handler to send content that is not JSON", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = (req, res) => {
           res.setHeader("Content-Type", "application/pdf");
           res.send("Some PDF data");
@@ -696,8 +710,8 @@ describe("attachHandlerToExpressServer()", () => {
 
     it("should return the expected response when the handler rejects", async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = async () => {
           throw new Error("Some unexpected error");
         };
@@ -721,8 +735,8 @@ describe("attachHandlerToExpressServer()", () => {
       const handlerError = new Error("Some unexpected error");
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = async () => {
           throw handlerError;
         };
@@ -737,16 +751,17 @@ describe("attachHandlerToExpressServer()", () => {
         .send({someProperty: 'ABC'})
         .expect(500);
 
-      sinon.assert.calledOnceWithExactly(mockLogger.fatal, "ERROR ON http-response-handlers.error", handlerError);
+      assert.strictEqual(mockLogger.fatal.mock.callCount(), 1);
+      assert.deepStrictEqual(mockLogger.fatal.mock.calls[0].arguments, ["ERROR ON http-response-handlers.error", handlerError]);
     });
 
     it(`should call the handler's "onHandlerError" method when the handler rejects, if this function is defined`, async () => {
       const handlerError = new Error("Some unexpected error");
-      const onHandlerError = sinon.stub();
+      const onHandlerError = mock.fn();
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = async () => {
           throw handlerError;
         };
@@ -765,16 +780,17 @@ describe("attachHandlerToExpressServer()", () => {
           code: "Some unexpected error",
           message: "Some unexpected error",
         });
-      sinon.assert.calledOnceWithExactly(onHandlerError, handlerError);
+      assert.strictEqual(onHandlerError.mock.callCount(), 1);
+      assert.deepStrictEqual(onHandlerError.mock.calls[0].arguments, [handlerError]);
     });
 
     it(`should allow the handler's "onHandlerError" function to be a static function`, async () => {
       const handlerError = new Error("Some unexpected error");
-      const onHandlerError = sinon.stub();
+      const onHandlerError = mock.fn();
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
         handler = async () => {
           throw handlerError;
         };
@@ -793,7 +809,8 @@ describe("attachHandlerToExpressServer()", () => {
           code: "Some unexpected error",
           message: "Some unexpected error",
         });
-      sinon.assert.calledOnceWithExactly(onHandlerError, handlerError);
+      assert.strictEqual(onHandlerError.mock.callCount(), 1);
+      assert.deepStrictEqual(onHandlerError.mock.calls[0].arguments, [handlerError]);
     });
 
     it(`should allow developers to map errors which occur in the handler by returning a new error from the "onHandlerError" method`, async () => {
@@ -801,9 +818,11 @@ describe("attachHandlerToExpressServer()", () => {
       const mappedError = new Error("Some mapped error");
 
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub().throws(handlerError);
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn(() => {
+          throw handlerError;
+        });
         onHandlerError() {
           return mappedError;
         }
@@ -825,9 +844,11 @@ describe("attachHandlerToExpressServer()", () => {
 
     it(`should return the expected response when the "onHandlerError" method returns a ValidationError`, async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub().throws(new Error("Some unexpected error"));
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn(() => {
+          throw new Error("Some unexpected error");
+        });
         onHandlerError() {
           return new ValidationError("SOME_ERROR_CODE", "Some error message");
         }
@@ -849,9 +870,11 @@ describe("attachHandlerToExpressServer()", () => {
 
     it(`should return details of the error thrown by the "onHandlerError" method when it unexpectedly throws an error while processing the original error from the handler`, async () => {
       class HandlerClass {
-        getSpec = sinon.stub().returns(handlerSpec);
-        configuration = sinon.stub().returns(handlerConfiguration);
-        handler = sinon.stub().throws(new Error("Some unexpected error"));
+        getSpec = mock.fn(() => handlerSpec);
+        configuration = mock.fn(() => handlerConfiguration);
+        handler = mock.fn(() => {
+          throw new Error("Some unexpected error");
+        });
         onHandlerError() {
           throw new Error("Another unexpected error");
         }

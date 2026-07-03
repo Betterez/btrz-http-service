@@ -1,10 +1,9 @@
-const {describe, it, beforeEach, afterEach} = require("node:test");
+const {describe, it, beforeEach, afterEach, mock} = require("node:test");
 const crypto = require("node:crypto");
 const assert = require("node:assert/strict");
 
 describe("userPermissionElevation", () => {
   const jwt = require("jsonwebtoken");
-  const sinon = require("sinon");
   const Chance = require("chance");
   const chance = new Chance();
   const {SimpleDao} = require("btrz-simple-dao");
@@ -28,7 +27,7 @@ describe("userPermissionElevation", () => {
     };
     res = {};
     logger = {
-      error: sinon.stub()
+      error: mock.fn()
     };
     action = {
       action: "test",
@@ -42,7 +41,7 @@ describe("userPermissionElevation", () => {
   });
 
   afterEach(() => {
-    sinon.restore();
+    mock.restoreAll();
   });
 
   describe("#getElevationToken()", () => {
@@ -228,20 +227,20 @@ describe("userPermissionElevation", () => {
         elevationToken: null
       };
       elevationTokenMiddleware = userPermissionElevation.elevationTokenMiddleware(logger);
-      next = sinon.stub();
+      next = mock.fn();
     });
 
     function expectMiddlewareCompletedWithNoErrors() {
-      assert.equal(next.calledOnce, true);
-      assert.deepEqual(next.firstCall.args, []);
-      assert.equal(logger.error.calledOnce, false);
+      assert.equal(next.mock.callCount(), 1);
+      assert.deepEqual(next.mock.calls[0].arguments, []);
+      assert.equal(logger.error.mock.callCount(), 0);
     }
 
     function expectMiddlewareCompletedWithError(errorMessage) {
-      assert.equal(next.calledOnce, true);
-      assert.deepEqual(next.firstCall.args, []);
-      assert.equal(logger.error.calledOnce, true);
-      assert.deepEqual(logger.error.firstCall.args[0], errorMessage);
+      assert.equal(next.mock.callCount(), 1);
+      assert.deepEqual(next.mock.calls[0].arguments, []);
+      assert.equal(logger.error.mock.callCount(), 1);
+      assert.deepEqual(logger.error.mock.calls[0].arguments[0], errorMessage);
     }
 
     it("should set 'req.elevationToken' to null if the request does not have the 'x-elevation-token' header", () => {
@@ -267,7 +266,7 @@ describe("userPermissionElevation", () => {
       elevationTokenMiddleware(req, res, next);
       assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Invalid token received in 'x-elevation-token' header");
-      const jwtVerifyError = logger.error.firstCall.args[1];
+      const jwtVerifyError = logger.error.mock.calls[0].arguments[1];
       assert.ok(jwtVerifyError instanceof Error);
       assert.equal(jwtVerifyError.message, "jwt malformed");
     });
@@ -279,7 +278,7 @@ describe("userPermissionElevation", () => {
       elevationTokenMiddleware(req, res, next);
       assert.equal(req.elevationToken, null);
       expectMiddlewareCompletedWithError("Invalid token received in 'x-elevation-token' header");
-      const jwtVerifyError = logger.error.firstCall.args[1];
+      const jwtVerifyError = logger.error.mock.calls[0].arguments[1];
       assert.ok(jwtVerifyError instanceof Error);
       assert.equal(jwtVerifyError.message, "jwt expired");
     });
