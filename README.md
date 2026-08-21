@@ -186,3 +186,17 @@ _STRING
   UUID4_PATTERN: to validate uuid v4 ids
 
 ```
+
+### auditContext
+
+Builds the SimpleDao write context (`{accountId, userId, folder?}`) from an authenticated request. `folder` is optional and omitted when empty.
+
+```
+const {auditContext} = require("btrz-http-service");
+
+dao.for(Model).update(query, update, undefined, auditContext(req, "email-settings"));
+```
+
+`accountId` is `req.account.accountId`, then `req.user.accountId`, then `req.account._id`. `userId` is `req.user._id` (or `.id` / `.userId`). If there is no user, `userId` falls back to `accountId` so the write still audits.
+
+Commands without Express `req` can pass the same shape auth already puts on the request: `{account: {accountId}, user}`.

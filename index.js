@@ -10,4 +10,4 @@ exports.swaggerSchemas = require("./lib/swagger-schemas");
 exports.lexiconCommands = require("./lib/lexicons-commands");
 exports.ExpiringKeys = require("./lib/expiring-keys");
 exports.userPermissionElevation = require("./lib/user-permission-elevation");
-
+exports.auditContext = require("./lib/audit-context");
